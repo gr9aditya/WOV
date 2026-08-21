@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------
+# Unity
+# ---------------------------------------------------------------
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+Recordings/
+
+# Never ignore .meta files: Unity needs them to keep asset references stable.
+!*.meta
+
+# Asset meta data should only be ignored when the corresponding asset is also ignored
+!/[Aa]ssets/**/*.meta
+
+# ---------------------------------------------------------------
+# Visual Studio / Rider / VS Code generated files
+# ---------------------------------------------------------------
+.vs/
+.idea/
+.vscode/
+ExportedObj/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# ---------------------------------------------------------------
+# OS files
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------
+# Builds and packages
+# ---------------------------------------------------------------
+*.apk
+*.aab
+*.app
+*.unitypackage
+sysinfo.txt
+crashlytics-build.properties
+
+# ---------------------------------------------------------------
+# Project specific
+# ---------------------------------------------------------------
+# Photographs of the printed Swiss Post briefing deck used as the source for this
+# walkthrough. They are reference material owned by Swiss Post, not our work, so they
+# are kept out of the repository by default. Remove this line only if you have
+# permission to redistribute them. See docs/sources.md for what they contain.
+images/

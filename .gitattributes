@@ -1,0 +1,23 @@
+# Normalise line endings: LF in the repository, native in the working copy.
+* text=auto
+
+*.cs      text diff=csharp
+*.md      text
+*.json    text
+*.py      text
+*.asset   text
+*.meta    text
+*.txt     text
+
+# Unity YAML files merge badly with the default driver; UnityYAMLMerge handles them.
+*.unity   merge=unityyamlmerge eol=lf
+*.prefab  merge=unityyamlmerge eol=lf
+*.asset   merge=unityyamlmerge eol=lf
+
+# Binary assets
+*.png     binary
+*.jpg     binary
+*.gif     binary
+*.pdf     binary
+*.dll     binary
+*.ttf     binary
