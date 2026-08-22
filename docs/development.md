@@ -15,16 +15,17 @@ who forgets them:
 
 ## Running
 
-The scene is generated rather than committed, so create it once:
+Open `Assets/EVotingWalkthrough3D/Walkthrough3D.unity` and press **Play**.
 
-**E-Voting Walkthrough 3D → Create and Open Scene**
+The scene is deliberately almost empty — a camera and one `Walkthrough3D` component. Everything
+visible (desk, monitor, card, voter, lights) is built in `Awake`, so the scene file stays tiny and
+essentially never changes, which keeps it out of merge conflicts.
 
-That writes `Assets/EVotingWalkthrough3D/Walkthrough3D.unity` with a camera and a `Walkthrough3D`
-component, and opens it. Press **Play**.
+**E-Voting Walkthrough 3D → Create and Open Scene** regenerates it from scratch if needed.
 
-Keeping the scene out of the repository means it cannot drift from the code, and there is no
-`.unity` YAML file to produce merge conflicts. Everything visible — desk, monitor, card, voter,
-lights — is built in `Awake`.
+An earlier revision kept the scene out of version control and made creating it a required first
+step. That optimised for a tidy repository at the cost of anyone trying to run the thing, so the
+scene is now committed.
 
 ## Architecture
 

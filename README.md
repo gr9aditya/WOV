@@ -32,11 +32,14 @@ This is an **explainer, not a game**. See [Roadmap](#roadmap).
 Requires **Unity 6000.5.9f1** — the version this project already targets. No extra packages.
 
 1. Open the project in Unity Hub
-2. Menu: **E-Voting Walkthrough 3D → Create and Open Scene**
-3. Press **Play**
+2. Open the scene **`Assets/EVotingWalkthrough3D/Walkthrough3D.unity`**
+3. Press **Play**, then **→** or **Next** to advance
 
-The scene is generated rather than committed, so it cannot drift from the code and leaves no
-`.unity` YAML to merge. Everything — desk, monitor, card, voter, lighting — is built at startup.
+The scene holds only a camera and one `Walkthrough3D` component; everything visible — desk,
+monitor, card, voter, lighting — is built in `Awake`. If the scene ever goes missing,
+**E-Voting Walkthrough 3D → Create and Open Scene** recreates it.
+
+Note that this is a slideshow, not an animation: each step is a still image until you advance.
 
 ### Controls
 

@@ -16,7 +16,7 @@ public static class WalkthroughBuild
     const string ScenePath = "Assets/EVotingWalkthrough3D/Walkthrough3D.unity";
 
     [MenuItem("E-Voting Walkthrough 3D/Create and Open Scene")]
-    public static string CreateScene()
+    public static void CreateScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -30,8 +30,8 @@ public static class WalkthroughBuild
             Directory.GetParent(Application.dataPath).FullName, ScenePath)));
         EditorSceneManager.SaveScene(scene, ScenePath);
 
+        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         Debug.Log("Created " + ScenePath + " — press Play.");
-        return ScenePath;
     }
 
     [MenuItem("E-Voting Walkthrough 3D/Build Windows Player")]
