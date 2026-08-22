@@ -18,8 +18,8 @@ compares them against the paper. If they match, the vote was registered correctl
 something tampered with the vote and the voter stops.
 
 That comparison is the heart of the system, and this walkthrough exists to make it obvious.
-Fourteen steps, including the security checks before starting and the clean-up afterwards — both
-easy to skip and more important than they look.
+Fifteen steps, following the briefing's page order — including the security checks before starting,
+the failure path when a code does not match, and the clean-up afterwards.
 
 This is an **explainer, not a game**. See [Roadmap](#roadmap).
 
@@ -66,30 +66,35 @@ pixel primitives (`Rect`, `Border`, `Dither`), which keeps the larger shapes edi
 Everything uses point filtering and integer pixel sizes, and the coin snaps to the pixel grid as it
 flies, so nothing shimmers between pixels.
 
-**Two deliberate compromises.** The card's four symbols are `[^] [*] [O] [+]` rather than drawn
-shapes — at the size those rows occupy, a pixel pentagon would be an unreadable smudge. And the
-text uses a normal font rather than a bitmap one, because a 5×7 pixel font would make the
-explanatory paragraphs genuinely hard to read. This is an explainer first and a pixel-art piece
-second.
+**One deliberate compromise.** The text uses a normal font rather than a bitmap one, because a 5×7
+pixel font would make the explanatory paragraphs genuinely hard to read. This is an explainer first
+and a pixel-art piece second.
 
-## The fourteen steps
+The card's symbols are the printed ones — ▲ ◆ ● ★. The real card prints a filled *pentagon* for the
+Bestätigungscode, but U+2B1F has no glyph in Unity's default font, so this uses the filled circle
+the portal also uses for that step.
+
+## The fifteen steps
+
+Ordered as the briefing's pages, not as a summary of them.
 
 | # | Step | What it shows |
 |---|---|---|
-| 1 | The voter's journey | Title and framing |
-| 2 | The voting card arrives by post | The four codes, generated per voter and per election |
-| 3 | Am I on the real portal? | Typing the address by hand, checking the certificate fingerprint |
-| 4 | A browser without add-ons | Incognito / Private mode, translation off |
-| 5 | Portal step 1 · Legal provisions | Acknowledging the terms |
-| 6 | Portal step 2 · Start voting | Initialization Code + year of birth |
-| 7 | Portal step 3 · Enter the vote | Making the selections |
-| 8 | Portal step 4 · Check the vote | Review, then encrypt and send |
-| 9 | Portal step 5 · Verify the Choice Return Codes | **The key step** — screen vs. paper |
-| 10 | Portal step 6 · Enter the Confirmation Code | The step that actually casts the vote |
-| 11 | Portal step 7 · Verify the Finalization Code | Confirmation the vote is in the ballot box |
-| 12 | Stopping and resuming | What can still be changed, and when |
-| 13 | After voting · Clearing the traces | Cookies and cache, and when it is unnecessary |
-| 14 | Why this is trustworthy | Individual and universal verifiability, vote secrecy |
+| 1 | Explain Swiss Post E-Voting Through a Game | Cover, and the two-round scheme in one line |
+| 2 | Two rounds, in sequence | The briefing's sequence diagram, written out |
+| 3 | The voting card | Everything a card carries, from the briefing's list |
+| 4 | Access the portal, then check the certificate | Typing the URL, and the full SHA-256 fingerprint |
+| 5 | The recommended security checks | Certificate, **HTML/JS integrity**, add-ons, translation, codes, cache |
+| 6 | Portal step 1 · Gesetzliche Bestimmungen | Both checkboxes, StGB Art. 279–283 |
+| 7 | Portal step 2 · Stimmabgabe starten | Initialization Code + Geburtsjahr 1980 |
+| 8 | Portal step 3 · Stimme erfassen | Weather **and** Variantenabstimmung selections |
+| 9 | Portal step 4 · Stimme kontrollieren | Review, then the encrypt-and-send dialog |
+| 10 | Portal step 5 · Prüfcodes verifizieren | **The key step** — four returned codes against page 2 of the card |
+| 11 | Portal step 5 · If a code does not match | **The failure path** — abort, contact the canton |
+| 12 | Portal step 6 · Bestätigungscode eingeben | The step that actually casts the vote |
+| 13 | Portal step 7 · Finalisierungscode verifizieren | Match, and the process is complete |
+| 14 | Stopping and resuming | The three cases, from the briefing verbatim |
+| 15 | After voting · Browserdaten löschen | Cookies and cache, and when it is unnecessary |
 
 Full detail, with sources, in **[docs/voting-process.md](docs/voting-process.md)**.
 
@@ -100,10 +105,10 @@ project uses the names a voter actually sees on the portal:
 
 | Used here (portal) | Also called (System Specification v1.6.1) |
 |---|---|
-| `[^]` Initialization Code | Start Voting Key |
-| `[*]` Choice Return Codes | Choice Return Codes |
-| `[O]` Confirmation Code | Ballot Casting Key |
-| `[+]` Finalization Code | Vote Cast Return Code |
+| ▲ Initialisierungscode / Initialization Code | Start Voting Key |
+| ◆ Prüfcodes / Choice Return Codes | Choice Return Codes |
+| ● Bestätigungscode / Confirmation Code | Ballot Casting Key |
+| ★ Finalisierungscode / Finalization Code | Vote Cast Return Code |
 
 If you pull text from the specification or from `Security-advices/`, translate the names so the
 walkthrough stays internally consistent.
@@ -115,7 +120,8 @@ The walkthrough is self-contained under one folder and touches nothing else in t
 ```
 Assets/EVotingWalkthroughPixel/
   Scripts/
-    PixelWalkthrough.cs        All fourteen steps, scene, animation, text
+    PixelWalkthrough.cs        All fifteen steps, scene, animation, text
+    Ballot.cs                  The demo ballot and every printed Choice Return Code
     PixelArt.cs                Palette, sprite building, pixel drawing primitives
     PixelSprites.cs            The art: character, coin, card, monitor, desk, tiles
     PixelScreenshotCapture.cs  Documentation screenshot pass (-capture flag)
@@ -125,7 +131,7 @@ docs/
   voting-process.md            The documented process, with sources
   sources.md                   Where every fact came from
   development.md               Architecture, editing content, building, regenerating images
-  screenshots.md               All fourteen steps as images
+  screenshots.md               All fifteen steps as images
   screenshots/                 One PNG per step (generated)
   walkthrough.gif              All steps as an animation (generated)
 tools/
@@ -161,7 +167,7 @@ Details in [docs/development.md](docs/development.md).
 | [docs/voting-process.md](docs/voting-process.md) | The full process, the security checks, and the system's stated limits |
 | [docs/sources.md](docs/sources.md) | Every source, and the terminology discrepancy between them |
 | [docs/development.md](docs/development.md) | Architecture, editing content, building, regenerating images |
-| [docs/screenshots.md](docs/screenshots.md) | All fourteen steps as images |
+| [docs/screenshots.md](docs/screenshots.md) | All fifteen steps as images |
 
 ## Sources
 

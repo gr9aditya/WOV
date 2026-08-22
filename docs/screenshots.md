@@ -6,58 +6,62 @@ Do not edit these by hand; regenerate them after changing a step.
 
 All steps as an animation: [walkthrough.gif](walkthrough.gif)
 
-### 1. the voter s journey through e voting
+### 1. explain swiss post e voting through a game
 
-![step 01](screenshots/step-01-the-voter-s-journey-through-e-voting.png)
+![step 01](screenshots/step-01-explain-swiss-post-e-voting-through-a-game.png)
 
-### 2. the voting card arrives by post
+### 2. two rounds in sequence
 
-![step 02](screenshots/step-02-the-voting-card-arrives-by-post.png)
+![step 02](screenshots/step-02-two-rounds-in-sequence.png)
 
-### 3. before starting am i on the real portal
+### 3. the voting card
 
-![step 03](screenshots/step-03-before-starting-am-i-on-the-real-portal.png)
+![step 03](screenshots/step-03-the-voting-card.png)
 
-### 4. before starting a browser without add ons
+### 4. access the portal then check the certificate
 
-![step 04](screenshots/step-04-before-starting-a-browser-without-add-ons.png)
+![step 04](screenshots/step-04-access-the-portal-then-check-the-certificate.png)
 
-### 5. portal step 1 legal provisions
+### 5. the recommended security checks
 
-![step 05](screenshots/step-05-portal-step-1-legal-provisions.png)
+![step 05](screenshots/step-05-the-recommended-security-checks.png)
 
-### 6. portal step 2 start voting
+### 6. portal step 1 legal provisions
 
-![step 06](screenshots/step-06-portal-step-2-start-voting.png)
+![step 06](screenshots/step-06-portal-step-1-legal-provisions.png)
 
-### 7. portal step 3 enter the vote
+### 7. portal step 2 start voting
 
-![step 07](screenshots/step-07-portal-step-3-enter-the-vote.png)
+![step 07](screenshots/step-07-portal-step-2-start-voting.png)
 
-### 8. portal step 4 check the vote then send it
+### 8. portal step 3 enter the vote
 
-![step 08](screenshots/step-08-portal-step-4-check-the-vote-then-send-it.png)
+![step 08](screenshots/step-08-portal-step-3-enter-the-vote.png)
 
-### 9. portal step 5 verify the choice return codes
+### 9. portal step 4 check the vote then send it
 
-![step 09](screenshots/step-09-portal-step-5-verify-the-choice-return-codes.png)
+![step 09](screenshots/step-09-portal-step-4-check-the-vote-then-send-it.png)
 
-### 10. portal step 6 enter the confirmation code
+### 10. portal step 5 verify the choice return codes
 
-![step 10](screenshots/step-10-portal-step-6-enter-the-confirmation-code.png)
+![step 10](screenshots/step-10-portal-step-5-verify-the-choice-return-codes.png)
 
-### 11. portal step 7 verify the finalization code
+### 11. portal step 5 if a code does not match
 
-![step 11](screenshots/step-11-portal-step-7-verify-the-finalization-code.png)
+![step 11](screenshots/step-11-portal-step-5-if-a-code-does-not-match.png)
 
-### 12. stopping and resuming
+### 12. portal step 6 enter the confirmation code
 
-![step 12](screenshots/step-12-stopping-and-resuming.png)
+![step 12](screenshots/step-12-portal-step-6-enter-the-confirmation-code.png)
 
-### 13. after voting clearing the traces
+### 13. portal step 7 verify the finalization code
 
-![step 13](screenshots/step-13-after-voting-clearing-the-traces.png)
+![step 13](screenshots/step-13-portal-step-7-verify-the-finalization-code.png)
 
-### 14. why this is trustworthy
+### 14. stopping and resuming
 
-![step 14](screenshots/step-14-why-this-is-trustworthy.png)
+![step 14](screenshots/step-14-stopping-and-resuming.png)
+
+### 15. after voting clearing the traces
+
+![step 15](screenshots/step-15-after-voting-clearing-the-traces.png)
