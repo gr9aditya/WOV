@@ -601,6 +601,82 @@ function drawCrocScene() {
   if (state.enemyState === 'alive') hotspotMarker(150, 72);
   drawBruno(); }
 
+/* ===================== Bestaetigungstor = Runenturm =====================
+   Das Sprite (assets/props/tower.png, 160x126) liefert nur das Mauerwerk und
+   sitzt unten-mittig auf groundY+2 -> Sprite-Origin (48, -12); der Rundbogen
+   liegt in Weltkoordinaten bei x 114..142, Scheitel y 68, Schwelle groundY.
+   Alles, was leuchtet oder sich bewegt, zeichnet der Code: Runen (Bogen,
+   Wand, Bodenplatten, Konsole) mit eigenem, langsamem Puls, das Holztor mit
+   Eisenbaendern, der violette Schein auf Mauer und Boden. Die Sequenzen
+   'gate_open' / 'gate_reject' (Story unveraendert) steuern Kaskade, Tor und
+   Rotflackern.                                                              */
+const TOWER_X = 128, TOWER_OX = TOWER_X - 80, TOWER_OY = groundY + 2 - 126;
+const ARCH = { x0: TOWER_OX + 66, x1: TOWER_OX + 94, top: TOWER_OY + 80, r: 14, cx: TOWER_X, cy: TOWER_OY + 94 };
+const RUNE_GLYPHS = [
+  ['#.#','##.','#.#','#..','#..'], ['###','#..','##.','#..','###'], ['.#.','#.#','###','#.#','#.#'], ['##.','#.#','##.','#.#','#.#'],
+  ['#.#','###','#.#','#.#','#.#'], ['###','.#.','.#.','.#.','###'], ['#..','#..','#..','#..','###'], ['#.#','.#.','#.#','.#.','#.#'],
+  ['###','#.#','#.#','#.#','###'], ['.#.','###','.#.','.#.','.#.'], ['#.#','#.#','###','..#','..#'], ['##.','#.#','##.','#..','#..'],
+  ['#..','##.','#.#','##.','#..'], ['###','..#','.#.','#..','###'], ['#.#','#.#','#.#','###','.#.']
+];
+// Runenliste: Bogen (9, im Uhrzeigersinn von links unten), Wand (4), Bodenplatten (2)
+const TOWER_RUNES = (() => {
+  const list = [];
+  for (let i = 0; i < 9; i++) {
+    const ang = Math.PI + Math.PI * i / 8;
+    list.push({ x: Math.round(ARCH.cx + Math.cos(ang) * (ARCH.r + 4)), y: Math.round(ARCH.cy + Math.sin(ang) * (ARCH.r + 4)), kind: 'arch', i });
+  }
+  for (const [x, y] of [[92, 30], [164, 48], [88, 98], [168, 102]]) list.push({ x, y, kind: 'wall', i: list.length });
+  for (const [x, y] of [[65, 108], [192, 107]]) list.push({ x, y, kind: 'slab', i: list.length });
+  return list.map((r, i) => ({ ...r, glyph: RUNE_GLYPHS[i % RUNE_GLYPHS.length], cyan: i % 3 === 1, sp1: 0.022 + 0.011 * (i % 4), sp2: 0.057 + 0.009 * (i % 3), ph: i * 1.7 }));
+})();
+function runeGlyph(x, y, color, alpha, glyph) {
+  ctx.globalAlpha = alpha; ctx.fillStyle = color;
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (glyph[r][c] === '#') ctx.fillRect(x - 1 + c, y - 2 + r, 1, 1);
+  ctx.globalAlpha = 1;
+}
+function runeHalo(x, y, color, alpha, rad) {
+  ctx.fillStyle = hexA(color, alpha * 0.28); ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = hexA(color, alpha * 0.18); ctx.beginPath(); ctx.arc(x, y, rad * 1.8, 0, Math.PI * 2); ctx.fill();
+}
+// Tor im Bogen: zwei Fluegel mit Eisenbaendern, drehen ueber openK nach innen auf
+function towerDoor(openK, red) {
+  const x0 = ARCH.x0, x1 = ARCH.x1, top = ARCH.top, base = groundY;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, top + ARCH.r, x1 - x0, base - top - ARCH.r); ctx.arc(ARCH.cx, top + ARCH.r, ARCH.r, Math.PI, 0); ctx.clip();
+  // Innenraum: dunkel, bei offenem Tor violett durchleuchtet
+  ctx.fillStyle = '#0c0a12'; ctx.fillRect(x0, top, x1 - x0, base - top);
+  if (openK > 0) {
+    const g = ctx.createLinearGradient(0, top, 0, base);
+    g.addColorStop(0, `rgba(140,90,255,${0.12 + 0.35 * openK})`); g.addColorStop(1, `rgba(120,220,255,${0.05 + 0.3 * openK})`);
+    ctx.fillStyle = g; ctx.fillRect(x0, top, x1 - x0, base - top);
+    ctx.fillStyle = `rgba(200,170,255,${0.5 * openK})`; ctx.fillRect(ARCH.cx - 1, top + 6, 2, base - top - 6);   // Lichtspalt
+  }
+  const half = (x1 - x0) / 2, lw = Math.max(0, Math.round(half * (1 - openK)));
+  const leaf = (lx, dir) => {
+    if (lw <= 0) return;
+    ctx.fillStyle = '#1b1024'; ctx.fillRect(lx, top, lw, base - top);
+    ctx.fillStyle = '#3a2416'; ctx.fillRect(lx + (dir > 0 ? 1 : 0), top + 1, Math.max(0, lw - 1), base - top - 1);
+    ctx.fillStyle = '#2a1810'; for (let px = 3; px < lw - 1; px += 4) ctx.fillRect(lx + px, top, 1, base - top);
+    ctx.fillStyle = '#2f2f36'; for (const py of [top + 14, top + 26, top + 38]) { ctx.fillRect(lx, py, lw, 3); ctx.fillStyle = '#55555e'; ctx.fillRect(lx, py, lw, 1); ctx.fillStyle = '#2f2f36'; }
+    ctx.fillStyle = '#8a8a96'; for (const py of [top + 15, top + 27, top + 39]) for (let px = 2; px < lw - 1; px += 5) ctx.fillRect(lx + px, py, 1, 1);
+    if (lw > 5) { ctx.fillStyle = '#6a6a78'; const rx = dir > 0 ? lx + lw - 4 : lx + 2; ctx.fillRect(rx, base - 22, 2, 3); }
+  };
+  leaf(x0, 1); leaf(x1 - lw, -1);
+  if (red > 0) { ctx.fillStyle = `rgba(255,60,60,${0.35 * red})`; ctx.fillRect(x0, top, x1 - x0, base - top); }
+  ctx.restore();
+}
+// Runenkonsole (Steintafel) links vom Eingang — leuchtet auf, wenn Bruno davorsteht
+function towerConsole(near, red) {
+  const x = 102, y = groundY;
+  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x - 7, y - 24, 14, 24);
+  ctx.fillStyle = '#5b6472'; ctx.fillRect(x - 6, y - 23, 12, 22);
+  ctx.fillStyle = '#6c7584'; ctx.fillRect(x - 6, y - 23, 12, 1); ctx.fillStyle = '#4a5261'; ctx.fillRect(x - 6, y - 2, 12, 1);
+  ctx.fillStyle = '#2b2f3a'; ctx.fillRect(x - 4, y - 21, 8, 16);
+  const k = near ? 0.75 + Math.sin(t * 0.2) * 0.25 : 0.18 + Math.sin(t * 0.03) * 0.06;
+  const col = red > 0 ? '#ff4a4a' : '#6fe0ff';
+  for (let i = 0; i < 3; i++) runeGlyph(x - 2 + (i % 2) * 4, y - 19 + i * 5, col, Math.min(1, k + (red > 0 ? red * 0.5 : 0)), RUNE_GLYPHS[(i + 5) % RUNE_GLYPHS.length]);
+  if (near || red > 0) runeHalo(x, y - 12, col, k, 9);
+}
 function drawConfirmGateScene() {
   const photo = bgOrElse('bg_confirmgate', () => {
     staticLayer('confirm_sky', () => sky('#7ea9c9','#c8e2f0'));
@@ -612,12 +688,58 @@ function drawConfirmGateScene() {
     });
   });
   if (photo) staticLayer('confirm_floor', () => stoneFloor(17));
-  // Requisiten — immer: Tor, Laternen, Runen
-  drawGate(128);
-  for (const lx of [88, 168]) { drawPix('lantern', lx, groundY - 72, 1); ctx.fillStyle = `rgba(255,210,120,${0.10 + Math.sin(t*0.12 + lx)*0.04})`; ctx.beginPath(); ctx.arc(lx, groundY - 76, 14, 0, Math.PI*2); ctx.fill(); }
-  const pulse = 0.55 + Math.sin(t*0.09)*0.35;
-  ctx.fillStyle = `rgba(255,214,92,${pulse})`;
-  for (let i = 0; i < 5; i++) ctx.fillRect(104 + i * 12, groundY - 90, 4, 3);
+  // Nacht: dunkelblaue Daemmerung ueber Foto/Platzhalter + Sterne
+  staticLayer('confirm_night', () => {
+    ctx.fillStyle = 'rgba(8,6,30,0.74)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(90,70,140,0.25)'; ctx.fillRect(0, groundY, W, H - groundY);
+    for (let i = 0; i < 40; i++) { const x = (rnd(i * 5.3) * W) | 0, y = (rnd(i * 9.1) * 60) | 0; ctx.fillStyle = `rgba(255,255,255,${0.3 + rnd(i) * 0.5})`; ctx.fillRect(x, y, 1, 1); }
+  });
+  // Zustand aus Sequenz/State
+  const st = sequence && sequence.steps[sequence.i];
+  const p = st ? seqProgress(st) : 0;
+  const opening = st && st.key === 'gate_open', rejecting = st && st.key === 'gate_reject';
+  let openK = state.gateOpen ? 1 : 0, red = 0;
+  if (opening) openK = Math.max(openK, Math.min(1, (p - 0.45) / 0.5));
+  if (rejecting) red = p < 0.7 ? 0.55 + 0.45 * Math.sin(p * 46) : Math.max(0, (1 - p) / 0.3);
+  // falscher Bestaetigungscode: die Story loest nur den roten Schadensblitz aus —
+  // der Turm reagiert darauf: Runen rot, kurzes Flackern, dann erloeschen
+  const dmgK = damage.t / CONFIG.damageTime;                 // 1 -> 0
+  if (!st && dmgK > 0 && !state.gateOpen) red = dmgK > 0.3 ? 0.55 + 0.45 * Math.sin((1 - dmgK) * 46) : dmgK / 0.3;
+  const rejectingNow = rejecting || red > 0;
+  // Gesamtleuchten (fuer den Schein auf Boden und Mauer)
+  let glowSum = 0;
+  const runeAlpha = (r) => {
+    if (rejectingNow) return 0.4 + 0.6 * red;
+    if (state.gateOpen) return 0.9 + Math.sin(t * 0.1 + r.ph) * 0.1;
+    const base = 0.42 + 0.25 * Math.sin(t * r.sp1 + r.ph) + 0.18 * Math.sin(t * r.sp2 + r.ph * 2);
+    if (opening && r.kind === 'arch') return p * 1.5 > r.i / 9 ? 1 : base * 0.4;     // Kaskade von links nach rechts
+    return Math.max(0.15, base);
+  };
+  // Schein auf dem Boden vor dem Turm
+  for (const r of TOWER_RUNES) glowSum += runeAlpha(r);
+  const gl = glowSum / TOWER_RUNES.length;
+  ctx.fillStyle = rejectingNow ? `rgba(255,60,60,${0.14 * red})` : `rgba(150,90,255,${0.10 + 0.14 * gl})`;
+  ctx.beginPath(); ctx.ellipse(TOWER_X, groundY + 2, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
+  // Turm-Mauerwerk (Sprite) — faellt ohne Datei auf einen Steinblock zurueck
+  if (!drawSprite('tower', 0, TOWER_X, groundY + 2, 1)) { ctx.fillStyle = '#5b6472'; ctx.fillRect(TOWER_OX + 30, -10, 100, groundY + 12); }
+  // violetter Schimmer auf dem Mauerwerk um den Bogen
+  ctx.fillStyle = rejectingNow ? `rgba(255,60,60,${0.12 * red})` : `rgba(160,100,255,${0.06 + 0.10 * gl})`;
+  ctx.beginPath(); ctx.arc(ARCH.cx, ARCH.cy, 34, 0, Math.PI * 2); ctx.fill();
+  // Fenster: schwaches, flackerndes Licht dahinter
+  for (const [wx, wy, ph] of [[TOWER_OX + 58, TOWER_OY + 18, 0], [TOWER_OX + 98, TOWER_OY + 54, 2]]) {
+    ctx.fillStyle = `rgba(170,140,240,${0.25 + Math.sin(t * 0.07 + ph) * 0.08 + Math.sin(t * 0.23 + ph) * 0.05})`; ctx.fillRect(wx - 1, wy, 4, 11);
+  }
+  // Tor + Konsole
+  towerDoor(openK, red);
+  const near = Math.abs(brunoX - TOWER_X) < CONFIG.interactRange && ui.mode === null;
+  towerConsole(near || opening || ui.mode === 'panel', red);
+  // Runen: Halo zuerst, dann Glyphen (langsam, unregelmaessig pulsierend)
+  for (const r of TOWER_RUNES) {
+    const a = runeAlpha(r);
+    const col = rejectingNow ? '#ff4a4a' : (r.cyan ? '#6fe0ff' : '#b57cff');
+    runeHalo(r.x, r.y, col, a, r.kind === 'slab' ? 7 : 5);
+    runeGlyph(r.x, r.y, col, Math.min(1, a), r.glyph);
+  }
   hotspotMarker(128); drawBruno(); }
 
 function drawStarsScene() {

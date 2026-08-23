@@ -32,6 +32,8 @@ const ASSET_MANIFEST = {
   sword:           { src:'assets/props/sword_small.png', frames:8, fps:6, w:6, h:14, loop:true },
   // Hut (Fedora, 16x9, per Pillow erzeugt): haengt am Haken, danach Overlay auf Brunos Kopf (drawHat)
   hat:             { src:'assets/props/hat.png', frames:1, fps:1, w:16, h:9, loop:false },
+  // Runenturm (tools/make_tower.py): Mauerwerk mit Rundbogen, 160x126, unten-mittig auf groundY+2
+  tower:           { src:'assets/props/tower.png', frames:1, fps:1, w:160, h:126, loop:false },
   // Ruderboot in Seitenansicht (tools/make_boat.py): naher Bordrand = Zeile 8, Kiel = Zeile 25
   boat:            { src:'assets/props/boat.png', frames:1, fps:1, w:56, h:26, loop:false },
   // --- Enemies ---
@@ -51,9 +53,10 @@ const ASSET_MANIFEST = {
   fisher_evil:     { src:'assets/props/fisher_evil.png', frames:5, fps:8, w:20, h:32, loop:true },
   boat_idle:       { src:null, frames:2, fps:3,  w:34, h:16, loop:true  },
   boat_break:      { src:null, frames:6, fps:10, w:34, h:20, loop:false },
-  gate_closed:     { src:'assets/props/gate_closed.png', frames:1, fps:1, w:64, h:96, loop:false },
-  gate_open:       { src:'assets/props/gate_open.png', frames:6, fps:9, w:64, h:96, loop:false },
-  gate_reject:     { src:'assets/props/gate_reject.png', frames:4, fps:10, w:64, h:96, loop:false },
+  // Tor ist seit v6 prozedural (gateDraw / Runenturm) — Sheets bleiben als Reserve in assets/props
+  gate_closed:     { src:null, frames:1, fps:1, w:64, h:96, loop:false },
+  gate_open:       { src:null, frames:6, fps:9, w:64, h:96, loop:false },
+  gate_reject:     { src:null, frames:4, fps:10, w:64, h:96, loop:false },
   sword_glow:      { src:null, frames:4, fps:6,  w:12, h:16, loop:true  },
   star_float:      { src:null, frames:4, fps:5,  w:12, h:12, loop:true  },
   star_collect:    { src:null, frames:5, fps:10, w:16, h:16, loop:false },

@@ -333,6 +333,20 @@ Felder bekommen.
   `map.clean` auch in der Zuordnungstabelle des Abschluss-Panels). Dann das
   Abschluss-Panel.
 
+### Dreizehnter Durchgang (Runenturm statt Bestätigungstor)
+
+* `confirmgate` ist neu: Mauerwerk als Sprite `assets/props/tower.png`
+  (`tools/make_tower.py`, 160×126, unten-mittig auf groundY+2, ragt oben aus
+  dem Bild), alles Leuchtende im Code (scenes.js, Block „Runenturm"):
+  `TOWER_RUNES` (9 Bogen-Keilsteine, 4 Wand, 2 Bodenplatten) mit je eigenem
+  langsamem Puls, `towerDoor()` (Holztor mit Eisenbändern, öffnet über openK),
+  `towerConsole()` (Runentafel links vom Eingang, leuchtet bei Nähe), Nacht-
+  Overlay + Sterne, violetter Schein auf Boden und Mauer.
+* Sequenzen unverändert: `gate_open` → Runen am Bogen leuchten nacheinander
+  auf, dann öffnet das Tor (bleibt offen über `state.gateOpen`);
+  `gate_reject` → Runen und Tor rot, flackern, erlöschen. Das Initialisierungs-
+  tor (`gate`) bleibt wie es war.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in
