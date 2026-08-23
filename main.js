@@ -18,6 +18,7 @@ function frame(now) {
   updateShake(dt);
   updateParticles(dt);
   if (damage.t > 0) damage.t = Math.max(0, damage.t - dt);
+  if (flash.t > 0) flash.t = Math.max(0, flash.t - dt);
 
   // Konfetti-Regen in der Endszene (dekorativ, gedeckelt durch particleMax)
   if (state.scene === 'end' && !transition.active) {
@@ -42,12 +43,19 @@ function frame(now) {
   drawSequence();
   drawCleanupBruno();                  // Bruno auf dem Besen (nur waehrend des Aufraeumflugs)
   drawParticles();
+  drawForeground();                    // Silhouetten am unteren Rand (vor Bruno, aber unter der Bodenlinie)
+  drawMood();                          // Farbstimmung der Szene
   if (off) ctx.restore();
   if (scenes[state.scene].hud) scenes[state.scene].hud();   // festes HUD (Boss-Anzeige), ohne Shake, ueber der Welt
+  updateIdleHint(dt); syncProgressPos();
   if (CONFIG.debug) drawDebugFeet();
 
   ctx.drawImage(vignette, 0, 0, W, H);       // dezente Rand-Abdunklung
 
+  if (flash.t > 0) {                   // warmer Erfolgsblitz, klingt linear ab
+    ctx.fillStyle = `rgba(255,244,200,${0.42 * (flash.t / CONFIG.flashTime)})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (damage.t > 0) {                  // roter Schadensblitz, klingt linear ab
     ctx.globalAlpha = 0.42 * (damage.t / CONFIG.damageTime);
     ctx.drawImage(damageVignette, 0, 0, W, H);
@@ -110,6 +118,7 @@ Assets.load(() => {
   document.querySelectorAll('#touchbar button').forEach(b => {
     const code = b.getAttribute('data-touch');
     const down = (ev) => { ev.preventDefault(); Sfx.resume();
+      noteInput();
       if (code === 'Space') { jump(); return; }
       if (code === 'KeyE') { window.dispatchEvent(new KeyboardEvent('keydown', { code:'KeyE', bubbles:true })); return; }
       keys[code] = true; };

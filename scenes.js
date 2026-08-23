@@ -277,7 +277,7 @@ function drawHomeScene() {
     });
   });
   // Requisiten — immer: Chalet mit Rauch, Briefkasten (Hotspot x=122)
-  staticLayer('home_props', () => { if (!drawSprite('chalet', 0, 53, groundY, 1)) chalet(groundY); drawPix('mailbox', 122, groundY, 1); });
+  staticLayer('home_props', () => { groundShadow(53, 58, 0.22, 0); groundShadow(122, 9, 0.25, 0); if (!drawSprite('chalet', 0, 53, groundY, 1)) chalet(groundY); drawPix('mailbox', 122, groundY, 1); });
   chaletSmoke(groundY);
   hotspotMarker(122); drawBruno(); }
 
@@ -313,6 +313,7 @@ function drawRiverScene() {
   }
   // Requisiten — immer: Schilder, Boote, Fischer
   for (const b of BOATS) { drawBoatSign(b.sign, b.num); if (state.boatGone !== b.num) drawBoatHull(b.x, groundY, b.phase, true); }
+  groundShadow(44, 11, 0.28, 0); groundShadow(220, 11, 0.28, 0);
   drawSprite('fisher_good', loopFrame('fisher_good'), 44, groundY, 1);
   drawSprite('fisher_evil', loopFrame('fisher_evil'), 220, groundY, -1);
   hotspotMarker(70); hotspotMarker(190); drawBruno(); }
@@ -342,9 +343,10 @@ function drawBoatHull(x, y, phase, bobOn, passenger) {
    und Schattenkante; die Nummer steht als Pixelschrift IM Schild (gleiche Ebene). */
 function drawBoatSign(x, label) {
   const g = groundY;
-  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 2, g - 28, 5, 23);            // Pfosten mit Kontur
-  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 1, g - 27, 3, 22);
-  ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, g - 27, 1, 22);
+  groundShadow(x, 6, 0.22, 0);
+  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 2, g - 28, 5, 28);            // Pfosten mit Kontur, steht auf der Stegkante (g)
+  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 1, g - 27, 3, 27);
+  ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, g - 27, 1, 27);
   ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 20, g - 44, 40, 18);          // Kontur
   ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 19, g - 43, 38, 16);          // Rahmen
   ctx.fillStyle = '#6b4a2a'; ctx.fillRect(x - 19, g - 28, 38, 1);           // Rahmen-Schattenkante
@@ -391,7 +393,7 @@ function drawSwordScene() {
     });
   });
   // Requisiten — immer: Altar, Lichtschein, Funken, Schwert
-  staticLayer('sword_altar', () => drawAltar(128));
+  staticLayer('sword_altar', () => { groundShadow(128, 26, 0.22, 0); drawAltar(128); });
   const glow=0.35+Math.sin(t*0.07)*0.18;
   ctx.fillStyle=`rgba(255,232,150,${glow})`;
   ctx.beginPath(); ctx.ellipse(128,groundY-11,18,4,0,0,Math.PI*2); ctx.fill();
@@ -405,8 +407,14 @@ function drawSwordScene() {
   }
   // the sword itself, standing in the altar slot, slowly turning
   // (waehrend der Aufheb-Sequenz zeichnet drawSequence() das Schwert)
-  if (!state.hasSword && !sequence) {
-    if (!drawSprite('sword', loopFrame('sword'), 128, groundY-10, 1)) { ctx.fillStyle=PAL.sword; ctx.fillRect(126,groundY-24,4,14); }
+  // Altar-Schwert bleibt sichtbar, bis die Aufnahme-Sequenz es selbst zeichnet (Schritt 'sword_altar' und danach)
+  const liftIdx = sequence ? sequence.steps.findIndex(st => st.key === 'sword_altar') : -1;
+  const liftedNow = sequence && liftIdx >= 0 && sequence.i >= liftIdx;
+  if (!state.hasSword && !liftedNow) {
+    // steckt mit der Spitze im Altar: Unterkante (Spitze) bei groundY-2, alles unter der Deckplatte (groundY-12) verdeckt
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, groundY - 12); ctx.clip();
+    if (!drawSprite('sword_altar', loopFrame('sword_altar'), 128, groundY-2, 1)) { ctx.fillStyle=PAL.sword; ctx.fillRect(126,groundY-30,4,20); }
+    ctx.restore();
     hotspotMarker(128);
   }
   drawBruno(); }
@@ -458,6 +466,8 @@ function drawGateScene() {
     ctx.fillStyle = 'rgba(255,240,170,0.10)';
     for (const [x0, w] of [[30, 14], [84, 10], [150, 12], [204, 16]]) { ctx.beginPath(); ctx.moveTo(x0 + 30, 0); ctx.lineTo(x0 + 30 + w, 0); ctx.lineTo(x0 + w, groundY); ctx.lineTo(x0, groundY); ctx.closePath(); ctx.fill(); }
   });
+  // einzelne Blaetter trudeln aus der Krone
+  if (pRand() < 0.035) spawnParticle(40 + pRand() * 176, 20 + pRand() * 30, { vx: -6, vy: 8, spread: 6, up: 0, g: 4, life: 3.5, flutter: 0.9, color: ['#6aae52', '#8fd968', '#c9a04a'], size: 2 });
   drawTreeGate();
   hotspotMarker(128); drawBruno(); }
 
@@ -469,17 +479,17 @@ function drawGateScene() {
    (das gewaehlte leuchtet gruen bzw. rot) und das geschnitzte Dreieck ueber
    dem Durchgang (Initialisierungscode). Die Logik (pickPattern) ist unveraendert;
    ohne Sprite faellt die Szene auf das alte Steintor zurueck.               */
-const TREEGATE_X = 128, PASSAGE = { x0: 108, x1: 148, top: 56 };
-const CARVED_COLS = [85, 101, 157, 173];        // Welt-x (Mitte) der vier Musterspalten in der Rinde
+const TREEGATE_X = 128, PASSAGE = { x0: 106, x1: 151, top: 49 };   // aus tools/make_treegate.py (Sprite 233x139)
+const CARVED_COLS = [80, 98, 160, 178];         // Welt-x (Mitte) der vier Musterspalten in der Rinde (Flaeche y 51..98)
 function forestFloor(seed) {
   ctx.fillStyle = '#3b2a1c'; ctx.fillRect(0, groundY, W, H - groundY);
   ctx.fillStyle = '#4a3524'; ctx.fillRect(0, groundY, W, 2);
-  for (let i = 0; i < 40; i++) {                                            // Moosflecken
+  for (let i = 0; i < 20; i++) {                                            // Moosflecken (ruhiger Boden)
     const x = (rnd(i * 3.7 + seed) * W) | 0, y = groundY + 2 + ((rnd(i * 5.1 + seed) * (H - groundY - 4)) | 0), w = 4 + ((rnd(i + seed) * 10) | 0);
     ctx.fillStyle = rnd(i * 2.3) > 0.5 ? '#4f7a2e' : '#5f8f38'; ctx.fillRect(x, y, w, 2);
     ctx.fillStyle = '#70a040'; ctx.fillRect(x + 1, y, Math.max(1, w - 3), 1);
   }
-  for (let i = 0; i < 30; i++) {                                            // Laub
+  for (let i = 0; i < 14; i++) {                                            // Laub
     const x = (rnd(i * 7.3 + seed) * W) | 0, y = groundY + 1 + ((rnd(i * 9.7 + seed) * (H - groundY - 2)) | 0);
     ctx.fillStyle = ['#b8642a', '#d08a3a', '#8a4a22', '#c9a04a'][i % 4]; ctx.fillRect(x, y, 2, 1);
   }
@@ -502,12 +512,13 @@ function drawTreeGate() {
   if (st && st.key === 'gate_open') openK = Math.max(openK, Math.min(1, seqProgress(st) * 1.15));
   if (st && st.key === 'gate_reject') red = 0.5 + Math.sin(seqProgress(st) * 24) * 0.4;
   const opening = st && st.key === 'gate_open';
+  groundShadow(TREEGATE_X - 44, 22, 0.2, 0); groundShadow(TREEGATE_X + 44, 22, 0.2, 0);
   if (!drawSprite('treegate', 0, TREEGATE_X, groundY + 4, 1)) { gateDraw(TREEGATE_X, groundY, openK, red); gateTorches(TREEGATE_X, groundY); return; }
   // geschnitzte Muster: Spalte i = PATTERNS[i], drei Symbole untereinander (Kerbe + Schnitzung).
   // Die Schnitzungen sind statisch -> einmal in eine Ebene gezeichnet; nur das Leuchten ist live.
   staticLayer('gate_carved', () => PATTERNS.forEach((pat, i) => pat.forEach((id, j) => {
-    drawPixTint('sym_' + id, CARVED_COLS[i] + 1, 73 + j * 14, '#1b1024', 0.85);   // Kerbe (Schatten)
-    drawPixTint('sym_' + id, CARVED_COLS[i], 72 + j * 14, '#d9b27a', 0.55);       // freigelegtes helles Holz
+    drawPixTint('sym_' + id, CARVED_COLS[i] + 1, 65 + j * 14, '#1b1024', 0.85);   // Kerbe (Schatten)
+    drawPixTint('sym_' + id, CARVED_COLS[i], 64 + j * 14, '#d9b27a', 0.55);       // freigelegtes helles Holz
   })));
   const picked = state.pickedPattern;
   PATTERNS.forEach((pat, i) => {
@@ -515,14 +526,14 @@ function drawTreeGate() {
     const lit = picked === i && (opening || state.gateOpen || red > 0);
     if (!lit) return;
     pat.forEach((id, j) => {
-      const by = 72 + j * 14;
+      const by = 64 + j * 14;
       if (red > 0) drawPixTint('sym_' + id, x, by, '#ff4a4a', 0.5 + red * 0.5);
       else { ctx.globalAlpha = state.gateOpen ? 0.8 + Math.sin(t * 0.1) * 0.2 : Math.min(1, openK * 1.5); drawPix('sym_' + id, x, by, 1); ctx.globalAlpha = 1; }
     });
-    if (lit && red === 0) runeHalo(x, 80, '#8fd968', Math.min(1, openK * 1.2), 12);
+    if (lit && red === 0) runeHalo(x, 74, '#8fd968', Math.min(1, openK * 1.2), 12);
   });
   // geschnitztes Dreieck (Initialisierungscode) auf der Rindentafel ueber dem Durchgang
-  drawSymbol('triangle', TREEGATE_X, 45, 6, 'carved', red > 0 ? '#5a1a1a' : '#2a1810');
+  drawSymbol('triangle', TREEGATE_X, 35, 6, 'carved', red > 0 ? '#5a1a1a' : '#2a1810');
   drawVines(openK, red);
 }
 /* Ranken im Durchgang: sieben Straenge, abwechselnd von links/rechts, leicht
@@ -615,9 +626,10 @@ function drawSpiderScene() {
     drawPix('skull', 198, groundY + 10, -1);
     drawPix('bones', 226, groundY + 14, 1);
   }));
-  // Foto: die helle Steinkante des Bodens liegt im Bild 2 px unter groundY — die Kante wird
-  // auf die Bodenlinie gezogen (Zeilen 114/115 nach 112/113), damit Bruno sichtbar darauf steht
-  if (Assets.has('bg_spider')) staticLayer('spider_lip', () => ctx.drawImage(Assets.imgs.bg_spider, 0, groundY + 2, W, 2, 0, groundY, W, 2));
+  // aufsteigende Sporen und flackerndes Glimmen beim Schaedel (Hoehle lebt)
+  if (pRand() < 0.08) spawnParticle(10 + pRand() * 236, groundY - 2 - pRand() * 20, { vx: 0, vy: -6, spread: 3, up: 4, g: -3, life: 3, flutter: 0.3, color: ['rgba(150,170,255,0.55)', 'rgba(110,130,220,0.4)'], size: 1 });
+  ctx.fillStyle = `rgba(255,170,60,${0.05 + Math.sin(t * 0.31) * 0.02 + Math.sin(t * 0.9) * 0.015})`;
+  ctx.beginPath(); ctx.ellipse(198, groundY - 2, 26, 9, 0, 0, Math.PI * 2); ctx.fill();
   // Gegner — immer: Spinne am Faden, Leiche bis zur Pruefung
   const spiderBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('spider') === 0;
   if (!spiderBusy && state.enemyState === 'alive') {
@@ -625,6 +637,7 @@ function drawSpiderScene() {
     const breathe = 1 + Math.sin(t*0.06) * 0.02;
     ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
     ctx.beginPath(); ctx.moveTo(150,0); ctx.lineTo(150,groundY-Math.round(ASSET_MANIFEST.spider_idle.h*CHAR_SCALE)+3+bob); ctx.stroke();
+    groundShadow(150, 16, 0.26, bob);
     ctx.save();
     ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
     drawSprite('spider_idle', loopFrame('spider_idle'), 150, groundY+bob, 1);
@@ -665,6 +678,7 @@ function drawCorpse(key, x, facing) {
   const spec = ASSET_MANIFEST[key];
   if (!spec) return;
   const last = spec.frames - 1;
+  groundShadow(x, 16, 0.26, 0);
   const cy = groundY - spec.h * spriteScale(key) / 2;
   ctx.save();
   ctx.translate(x, cy); ctx.rotate(Math.PI * facing); ctx.translate(-x, -cy);
@@ -706,7 +720,8 @@ function drawCrocScene() {
     });
     if (pRand() < 0.05) spawnParticle(20 + pRand() * 216, groundY - 12 + pRand() * 6, { up: 10, g: -8, life: 0.7, color: ['#9fd9a0', '#ffffff'] });
   });
-  void photo;
+  // Gluehwuermchen ueber dem Sumpf (auch ueber dem Foto)
+  if (photo && pRand() < 0.05) spawnParticle(20 + pRand() * 216, groundY - 10 - pRand() * 40, { vx: 0, vy: 0, spread: 8, up: 3, g: -2, life: 2.6, flutter: 0.8, color: ['rgba(190,255,150,0.7)', 'rgba(120,220,110,0.5)'], size: 1 });
   // Gegner — immer
   const crocBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('croc') === 0;
   if (!crocBusy && state.enemyState === 'alive') {
@@ -715,6 +730,7 @@ function drawCrocScene() {
     ctx.save();
     ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
     // Sheet schaut nach links — also Bruno entgegen, nicht spiegeln
+    groundShadow(150, 17, 0.28, 0);
     drawSprite('croc_idle', loopFrame('croc_idle'), 150, groundY+bob, 1);
     ctx.restore();
   } else if (!crocBusy && state.enemyState === 'dead') {
@@ -885,17 +901,19 @@ function castleDoors(openK, red) {
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x0, top, x1 - x0, 5);           // Schatten unter dem Bogen
   if (lw > 0) {
     const leaf = (lx, dir) => {
-      ctx.fillStyle = '#1b1024'; ctx.fillRect(lx, top, lw, base - top);
-      ctx.fillStyle = '#3a2416'; ctx.fillRect(lx + (dir > 0 ? 1 : 0), top + 1, Math.max(0, lw - 1), base - top - 1);
-      ctx.fillStyle = '#2a1810'; for (let px = 3; px < lw - 1; px += 4) ctx.fillRect(lx + px, top, 1, base - top);     // Planken
-      ctx.fillStyle = '#4a3020'; for (let px = 1; px < lw - 1; px += 4) ctx.fillRect(lx + px, top + 1, 1, base - top - 1);
+      // Metalltor: blaugraue Stahlplatten mit dunklen Naehten, Eisenbaender, Nieten, Scharniere, eine Rune je Fluegel
+      ctx.fillStyle = '#1b1e28'; ctx.fillRect(lx, top, lw, base - top);
+      ctx.fillStyle = '#3f4757'; ctx.fillRect(lx + (dir > 0 ? 1 : 0), top + 1, Math.max(0, lw - 1), base - top - 1);
+      ctx.fillStyle = '#2a303a'; for (let px = 3; px < lw - 1; px += 5) ctx.fillRect(lx + px, top, 1, base - top);     // Plattennaehte
+      ctx.fillStyle = '#55606f'; for (let px = 1; px < lw - 1; px += 5) ctx.fillRect(lx + px, top + 1, 1, base - top - 1); // Lichtkante
       for (const py of [top + 13, top + 25, top + 37]) {                                                               // Eisenbaender
-        ctx.fillStyle = '#2f2f36'; ctx.fillRect(lx, py, lw, 3); ctx.fillStyle = '#55555e'; ctx.fillRect(lx, py, lw, 1);
-        ctx.fillStyle = '#8a8a96'; for (let px = 2; px < lw - 1; px += 4) ctx.fillRect(lx + px, py + 1, 1, 1);           // Nieten
+        ctx.fillStyle = '#22262f'; ctx.fillRect(lx, py, lw, 3); ctx.fillStyle = '#4a5261'; ctx.fillRect(lx, py, lw, 1);
+        ctx.fillStyle = '#8a97a8'; for (let px = 2; px < lw - 1; px += 4) ctx.fillRect(lx + px, py + 1, 1, 1);           // Nieten
         const hx = dir > 0 ? lx : lx + lw - 2;                                                                         // Scharnier aussen
-        ctx.fillStyle = '#1b1e28'; ctx.fillRect(hx, py - 1, 2, 5); ctx.fillStyle = '#6a6a78'; ctx.fillRect(hx, py, 2, 3);
+        ctx.fillStyle = '#14171f'; ctx.fillRect(hx, py - 1, 2, 5); ctx.fillStyle = '#6c7584'; ctx.fillRect(hx, py, 2, 3);
       }
-      if (lw > 5) { const rx = dir > 0 ? lx + lw - 4 : lx + 2; ctx.fillStyle = '#8a8a96'; ctx.fillRect(rx, base - 22, 2, 3); ctx.fillStyle = '#1b1e28'; ctx.fillRect(rx, base - 21, 2, 1); }   // Ring
+      if (lw > 6) runeGlyph(lx + Math.round(lw / 2) - 1, top + 20, dir > 0 ? '#b57cff' : '#6fe0ff', 0.85, RUNE_GLYPHS[dir > 0 ? 3 : 8]);   // Rune
+      if (lw > 5) { const rx = dir > 0 ? lx + lw - 4 : lx + 2; ctx.fillStyle = '#8a97a8'; ctx.fillRect(rx, base - 22, 2, 3); ctx.fillStyle = '#14171f'; ctx.fillRect(rx, base - 21, 2, 1); }   // Ring
     };
     leaf(x0, 1); leaf(x1 - lw, -1);
     if (openK < 0.02) { ctx.fillStyle = '#0c0a12'; ctx.fillRect(ARCH.cx - 1, top + 1, 1, base - top - 1); }         // Spalt
@@ -955,11 +973,14 @@ function drawConfirmGateScene() {
     if (opening && r.kind === 'arch') return p * 1.5 > r.i / 9 ? 1 : base * 0.4;     // Kaskade von links nach rechts
     return Math.max(0.15, base);
   };
+  // violette Lichtmotten steigen vor dem Turm auf
+  if (pRand() < 0.07) spawnParticle(TOWER_X - 60 + pRand() * 120, groundY - pRand() * 10, { vx: 0, vy: -7, spread: 4, up: 5, g: -3, life: 3.2, flutter: 0.4, color: ['rgba(190,140,255,0.6)', 'rgba(120,220,255,0.45)'], size: 1 });
   // Schein auf dem Boden vor dem Turm
   for (const r of TOWER_RUNES) glowSum += runeAlpha(r);
   const gl = glowSum / TOWER_RUNES.length;
   ctx.fillStyle = rejectingNow ? `rgba(255,60,60,${0.14 * red})` : `rgba(150,90,255,${0.10 + 0.14 * gl})`;
   ctx.beginPath(); ctx.ellipse(TOWER_X, groundY + 2, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
+  groundShadow(TOWER_X, 58, 0.22, 0);
   // Turm-Mauerwerk (Sprite) — faellt ohne Datei auf einen Steinblock zurueck
   if (!drawSprite('tower', 0, TOWER_X, groundY + 2, 1)) { ctx.fillStyle = '#5b6472'; ctx.fillRect(TOWER_OX + 30, -10, 100, groundY + 12); }
   // violetter Schimmer auf dem Mauerwerk um den Bogen
@@ -1018,7 +1039,7 @@ STARS.forEach((s_,i)=>{
     if (p >= 0.5 && !state.starCollected) {
       state.starCollected = true; state.starCollectT = t;
       burst(s_.x, cy, 26, { spread: 70, up: 50, g: 40, life: 0.6, color: [s_.c, '#ffffff', s_.c], size: 2 });
-      Sfx.play('star');
+      Sfx.play('star'); successFlash();
     }
     if (!state.starCollected) { drawPix('star', s_.x, Math.round(cy) + 6, 1, { ch:'s', color:s_.c }); drawPixTint('star', s_.x, Math.round(cy) + 6, '#ffffff', Math.min(0.8, p * 1.6)); }
     return;
@@ -1050,7 +1071,6 @@ if (state.starCollected && state.starCollectT >= 0 && t - state.starCollectT < 1
 }
 // der eingesammelte Stern schwebt ueber Bruno (nach der Landung, bis zum Abgang)
 if (state.starCollected && !sequence && !state.brunoHidden) drawWonStar(brunoX, groundY - Math.round(40 * CHAR_SCALE) + Math.sin(t*0.05)*3, 0.6, STARS[state.starTaken].c);
-drawStarMedallion(40);
 hotspotMarker(40); drawBruno(); }
 
 // Fuenfzackiger Stern (gleiche Form wie das Finalisierungs-Symbol), scale 1 = 14 px
@@ -1058,14 +1078,6 @@ function drawStarShape(x, y, color, sc) {
   sc = sc || 1;
   drawSymbol('star', x, y + 0.6 * sc, 7 * sc, 'flat', color);
   ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(x-1, y-2*sc, 2, 2);
-}
-// Bodenmedaillon mit eingemeisseltem Stern vor der Sternwahl
-function drawStarMedallion(x) {
-  ctx.fillStyle = '#2a2a33'; ctx.beginPath(); ctx.ellipse(x, groundY + 7, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#4a4a55'; ctx.beginPath(); ctx.ellipse(x, groundY + 6, 15, 4.5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.translate(x, groundY + 6); ctx.scale(1, 0.55);
-  drawSymbol('star', 0, 0.5, 9, 'carved', '#1a1a22');
-  ctx.restore();
 }
 function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 function mixHex(h1, h2, k) {

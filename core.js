@@ -39,7 +39,10 @@ const CONFIG = {
   interactRange: 18,    // px — Abstand, ab dem ein Hotspot aktiv wird
   stepInterval: 0.24,   // s — Fussschritt-Sound/Staub beim Laufen
   particleMax: 220,     // hartes Limit, damit nichts unbegrenzt wachsen kann
-  musicVolume: 0.3,     // Grundlautstaerke der Musik (Audio-Elemente), bewusst leise
+  musicVolume: 0.21,    // Grundlautstaerke der Musik (Audio-Elemente): 30 % leiser als vorher (0.3); Sfx unveraendert
+  flashTime: 0.22,      // s — Aufblitzen bei Erfolg (Tor, Code, Stern, Schwert, Boot)
+  idleHintAfter: 10,    // s ohne Eingabe -> Steuerungshinweis
+  idleHintShow: 5,      // s sichtbar, wenn weiterhin keine Eingabe kommt
   musicFade: 0.8,       // s — Ueberblendung bei echtem Trackwechsel
   debug: /[?&]debug=1/.test(location.search),   // ?debug=1: Bodenlinie, Sprite-Box, Fusskante, Pivot einblenden (nie in Produktion)
   charScale: 1.2,       // Figuren-Massstab: Bruno +20 %; Schwert, Hut, Spinne, Krokodil haengen daran (spriteScale)
@@ -419,6 +422,9 @@ const [damageVignette, dctx] = offscreen();
   dctx.fillStyle = g; dctx.fillRect(0, 0, W, H);
 }
 const damage = { t: 0 };
+/* Erfolg: kurzes warmes Aufblitzen (respektiert den FX-Schalter wie der Schadensblitz) */
+const flash = { t: 0 };
+function successFlash() { if (!Prefs.data.shake) return; flash.t = CONFIG.flashTime; }
 /* Jeder Fehlschlag: roter Blitz + error-Sound + kurzer Shake.
    Blitz und Shake respektieren den FX-Schalter, der Ton nicht.        */
 function failFlash() {

@@ -444,6 +444,81 @@ Felder bekommen.
   Landung, dann erst Dialog/Lernkarte/Endszene. `flyout`, `star_flare/swoop/burst`
   und `drawStarFinale` sind entfernt; der eingesammelte Stern schwebt über Bruno.
 
+### Siebzehnter Durchgang (Schweben endgültig: Foto-Bodenkanten)
+
+* Diagnose per Script: alle 8 Bruno-Frames haben genau 2 leere Zeilen unter den
+  Füssen (Bounding-Box-Unterkante 30 von 32) — `padBottom` 2 gleicht das aus, die
+  unterste Pixelzeile liegt in jeder Szene auf Zeile 111, direkt über `groundY` 112.
+* Eigentliche Ursache der sichtbaren Lücke: die Foto-Hintergründe haben ihre
+  sichtbare Bodenkante nicht auf 112 — alpen.png/fork.png 113, spider.png 114
+  (dazwischen eine dunkle Konturzeile). `BG_FLOOR_ROW` in draw.js versetzt jedes
+  Foto um die Differenz nach oben (`bgOrElse`), untere Zeilen werden aufgefüllt.
+  Bodenhöhe, Sprite und Figurenpositionen unverändert; Hut/Schwert hängen an
+  Brunos Anker und wandern mit.
+* Geprüft mit herangezoomten Streifen in allen 11 Szenen plus Angriff, Hieb,
+  Bootsfahrt, Ertrinken, Schwert heben.
+
+### Achtzehnter Durchgang (Feinschliff: Schilder, Hinweis, Baumtor, Code, Aufräumen, Stern, Musik, Fortschritt, Altar-Schwert, Turm)
+
+* Bootsschilder: Pfosten reichen bis zur Stegkante (`drawBoatSign`).
+* Steuerungshinweis (`idleHint`, `updateIdleHint`, `#ctrlHint`): nach 10 s ohne Eingabe
+  bei frei steuerbarem Bruno, unten links, 55 % Deckkraft, Tasten aus `KEYBINDS`
+  (engine.js — einzige Quelle für Steuerung und Hinweis); weg bei Eingabe oder nach 5 s,
+  erst nach echter Eingabe + erneuter Pause wieder. `CONFIG.idleHintAfter/Show`.
+* Baumtor: `tools/make_treegate.py` zeichnet über einen Skalier-Proxy (+12 %, 233x139),
+  gezackter Kronenrand, dunkle Blätterballen; Weltkonstanten (`PASSAGE`, `CARVED_COLS`,
+  Tafel) aus der Script-Ausgabe. Waldboden: halb so viele Moos-/Laubpixel.
+* Bestätigungscode: `genConfirmCode()` in `rollCodeblatt()` (Format XXX-000, ohne I/J/O/Q),
+  zentral in `CODEBLATT.confirmCode`; Codeblatt und Turm lesen denselben Wert.
+  Kein persistenter Spielstand vorhanden → keine Migration nötig.
+* Aufräumen: `drawSweepingBruno` zeichnet kein Schwert mehr (nur Besen), Bruno verlässt
+  die Endszene nach links (`cleanup.phase 'exit'`), fegt leftwards, kommt am Ende von
+  links zurück. `state.hasSword` bleibt erhalten.
+* Stern: `STAR_Y` 64 (48 px über dem Boden), Sprunghöhe folgt automatisch.
+* Musik: `CONFIG.musicVolume` 0.21 (vorher 0.3). Sfx unverändert.
+* Fortschritt: unten mittig (`#progress`), weicht nach oben aus, wenn der Hotspot-Knopf
+  steht (`.lift`), unsichtbar hinter Panels/Modal/Menü (`.dim`; `syncProgressPos`).
+* Altar-Schwert: Manifest-Key `sword_altar` (gleiches Sheet, `scale: 1.44`), auch in der
+  Aufnahme-Sequenz (`lift` + `raise` über `step.swordScale`); getragenes Schwert bleibt 1.2.
+* Turm: kein Holz mehr — `tools/make_tower.py` zeichnet Eisenbeschläge, Runenstein-Lage,
+  Metallplatten; das Burgtor ist ein Metalltor mit Rune je Flügel (`castleDoors`).
+
+### Neunzehnter Durchgang (visueller Polish — nur Optik)
+
+* `SCENE_LOOK` (draw.js): pro Szene Lichtrichtung, Farbstimmung (`drawMood`), Dunst über
+  dem Hintergrund (`drawHaze`, in `bgOrElse`), Vordergrund-Silhouetten + dunklerer
+  Boden (`drawForeground`: grass/reeds/rocks/leaves, statisch gerastert), Wolkenschleier
+  (`drawCloudWisps`). `drawSprite` dunkelt die lichtabgewandte Sprite-Hälfte (16 %) ab
+  (`noShade` im Manifest für Hut/Schwert/Bootsfront).
+* Bodenschatten `groundShadow(x, w, alpha, lift)` unter Bruno (auch im Sprung, kleiner/
+  schwächer), Fischern, Spinne, Krokodil, Leichen, Sequenz-Figuren, Chalet, Briefkasten,
+  Altar, Schildern, Turm, Baumtor.
+* Bewegung: Blätter am Baumtor, Sporen + flackerndes Glimmen in der Höhle, Glühwürmchen
+  im Sumpf, Lichtmotten am Turm (alle `spawnParticle`, dezent).
+* Szenenwechsel ohne FX: Ab-/Aufblenden (`transition.quick` → 0.22 s Fade statt hartem
+  Schnitt; `applyScene` erst bei t ≥ wipe). Mit FX bleibt der Wipe.
+* Feedback: `successFlash()` (core.js, `flash`, `CONFIG.flashTime`) bei Tor, Boot, Schwert,
+  Statusprüfung, Code und Sternfang; Bruch-Partikel beim falschen Stern und beim Boot.
+* UI: eine Rahmensprache (Marine #0e1a30 + Doppelkante #3b5270 + Eckpixel) für Textbox,
+  Codeblatt, Pausenmenü, Titelkarte; Knöpfe (Leiste, Codeblatt, .btn, Touch, Hotspot)
+  dunkelgrün/gold mit Pixel-Fase. Keine Logik-, Text- oder Codeänderungen.
+
+### Zwanzigster Durchgang (Lernkarten vollständig, grosses Schwert, Stern-Medaillon weg)
+
+* Lernkarten: ein Mechanismus (`learnCard(step, ok, next)`), immer nach dem Ergebnisdialog,
+  vor Szenenwechsel/Respawn. Neu: `hat` (Stube, nach `dlg.inside.hat`) und `codeblatt`
+  (nach dem ersten Codeblatt + `dlg.codeblatt.intro`), Texte `learn.hat.*`,
+  `learn.codeblatt.*`, Tabellenzeile `map.hat` (DE/FR/IT). Bestehende Texte unverändert.
+  Die Karte erscheint nur bei „Lernkarten AN" (Prefs.learn, persistiert).
+* Schwert: neues Sheet `assets/props/sword_big.png` (`tools/make_sword.py`, 8 Frames 10x30,
+  Klinge 21 px, Gesamtlänge ~Brunos Höhe), Manifest `sword`/`sword_altar` mit `scale:1`
+  und `pivot:4` (Griffmitte). `drawHeldSword` nutzt `spec.scale`/`spec.pivot`, Hieb-Bogen
+  = 0.75·h. Am Altar steckt das Schwert mit der Spitze im Stein (Unterkante groundY-2,
+  unterhalb der Deckplatte abgeschnitten); die Aufnahme startet dort und schneidet
+  ebenfalls ab, bis die Spitze frei ist. Das Altar-Schwert bleibt sichtbar, bis der
+  Schritt `sword_altar` es selbst zeichnet.
+* Sternenkammer: das Bodenmedaillon mit dem Stern (`drawStarMedallion`) ist entfernt.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

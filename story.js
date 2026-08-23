@@ -20,18 +20,30 @@ const STARS = [
   { id:'red',   x:150, c:'#e0453f', rings:0, speed:0.06 },
   { id:'green', x:188, c:'#4ad66d', rings:3, speed:-0.028 }
 ];
-const STAR_Y = 52;
+const STAR_Y = 64;   // Sternmitte: 48 px ueber dem Boden — mit dem Sprung (jumpH ~22) erreicht Brunos Oberkoerper den Stern
 const STATUS_POOL = { spider: { win:['077','142','519'], awake:['280','361','808'] }, croc: { win:['130','247','605'], awake:['300','418','962'] } };
 const CODEBLATT = {
   ship: '1234',
   pattern: PATTERNS[0],
-  confirmCode: 'BÄR-582',
+  confirmCode: 'BÄR-582',                   // wird in rollCodeblatt() pro neuem Spiel neu erzeugt (Format XXX-000)
   finalStar: 'gold',
   spider: { win:'077', awake:'280' },
   croc: { win:'130', awake:'300' }
 };
+/* Bestaetigungscode: einmal pro neuem Spiel (rollCodeblatt), gleiches Format wie
+   bisher (3 Buchstaben, Bindestrich, 3 Ziffern). Lebt zentral in CODEBLATT — das
+   Codeblatt zeigt und der Turm prueft exakt denselben Wert; Szenenwechsel, falsche
+   Eingaben und Checkpoint-Respawn fassen ihn nicht an. Es gibt keinen persistenten
+   Spielstand (nur Einstellungen in localStorage), also nichts zu migrieren.      */
+function genConfirmCode() {
+  const L = 'ABCDEFGHKLMNPRSTUVWXYZ';                  // ohne I/J/O/Q (Verwechslung mit 1/0)
+  let s = '';
+  for (let i = 0; i < 3; i++) s += L[Math.floor(Math.random() * L.length)];
+  return s + '-' + (100 + Math.floor(Math.random() * 900));
+}
 function rollCodeblatt() {
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  CODEBLATT.confirmCode = genConfirmCode();
   CODEBLATT.pattern = pick(PATTERNS);
   CODEBLATT.finalStar = pick(STARS).id;
   for (const kind of ['spider', 'croc']) {
@@ -60,7 +72,7 @@ defScene('inside', {
         state.hasHat = true;                     // ab jetzt traegt Bruno den Hut in jeder Szene und Sequenz
         Sfx.play('pickup');
         PARTICLE_FX.star(brunoX, groundY - 30);
-        showDialogue('dlg.inside.hat');
+        showDialogue('dlg.inside.hat', { onFinal: () => learnCard('hat', true, () => {}) });
       } },
     { id:'door', x:228, label: L('hs.leave'),
       onInteract: () => { if (state.hasHat) goToScene('home'); else showDialogue('dlg.inside.noHat'); } }
@@ -92,6 +104,7 @@ function chooseBoat(num) {
   const walk = { key:'bruno_walk', fromX: brunoX, toX: bx - 8, dur: Math.max(0.3, Math.abs(bx - 8 - brunoX) / 60) };
   state.boatGone = num;                 // dieses Boot zeichnet jetzt die Sequenz, nicht die Kulisse
   if (num === CODEBLATT.ship) {
+    successFlash();
     // FAHRT: einsteigen, ablegen, bis aus dem Bild segeln — dann erst der Wipe
     playSequence([
       walk,
@@ -105,7 +118,8 @@ function chooseBoat(num) {
     playSequence([
       walk,
       { key:'boat_sail', fromX: bx, toX: bx + 26, dur: 1.1, num, hideBruno: true, sfx:'sail' },
-      { key:'boat_break', x: bx + 26, bottomY: groundY, dur: 0.9, num, hideBruno: true, sfx:'crash', shake: 3.5, shakeDur: 0.45 },
+      { key:'boat_break', x: bx + 26, bottomY: groundY, dur: 0.9, num, hideBruno: true, sfx:'crash', shake: 3.5, shakeDur: 0.45,
+        onStart: () => burst(bx + 26, groundY + 6, 26, { spread: 90, up: 60, g: 120, life: 0.8, color: ['#b07a3e', '#5a3a22', '#f4e9c9', '#cfefff'], size: 2 }) },
       { key:'bruno_death', x: bx + 18, bottomY: groundY + 4, dur: 1.6, sfx:'drown', fx:'drown' },
       { key:'splash', x: bx + 18, bottomY: groundY + 5, dur: 0.45, sfx:'splash', shake: 1.5, hideBruno: true }
     ], () => {
@@ -135,12 +149,13 @@ function showSwordRules() {
    Altar (Chime + goldener Funkenregen), er richtet sich mit dem Schwert in
    der Pfote auf. hasSword wird erst gesetzt, wenn die Sequenz durch ist.  */
 function swordPickup() {
+  successFlash();
   const facing = brunoX <= 128 ? 1 : -1;
   const x = 128 - facing * 15;          // neben dem Altar stehen, nicht darauf
   playSequence([
     { key:'bruno_walk', fromX: brunoX, toX: x, facing, dur:0.3 },
     { key:'bruno_idle', x, facing, dur:0.55, fx:'reach' },
-    { key:'sword', x:128, bottomY:groundY-10, dur:0.75, fx:'lift', sfx:'chime',
+    { key:'sword_altar', x:128, bottomY:groundY-2, dur:0.75, fx:'lift', sfx:'chime',
       onStart: () => PARTICLE_FX.star(128, groundY - 14) },
     { key:'bruno_idle', x, facing, dur:0.85, fx:'raise',
       onStart: () => PARTICLE_FX.star(x + facing * 14, groundY - 30) }
@@ -169,6 +184,7 @@ defScene('gate', {
 function pickPattern(p) {
   state.pickedPattern = PATTERNS.indexOf(p);      // nur fuer die Darstellung am Baumtor (leuchtende Schnitzung)
   if (p.join('-') === CODEBLATT.pattern.join('-')) {
+    successFlash();
     playSequence([{ key:'gate_open', x:128, bottomY:groundY, dur:0.9, sfx:'gate', shake:1.5, shakeDur:0.5 }],
       () => { state.gateOpen = true; showDialogue('dlg.gate.ok', { icon:'pattern', onFinal: () => learnCard('pattern', true, () => doorWalk(() => goToScene('fork'))) }); });
   } else {
@@ -227,7 +243,7 @@ function showStatusCheck(kind, shown, attempt) {
   state.meterValue = shown;
   const ask = () => showChoice(tr('dlg.status.shown', { code: shown }), [
     { label:'ui.correct', onClick: () => {
-        if (shown === real) { state.enemyState = 'verified'; showDialogue('dlg.status.ok', { icon:'status', onFinal: () => learnCard('status', true, () => goToScene('confirmgate')) }); }
+        if (shown === real) { state.enemyState = 'verified'; successFlash(); showDialogue('dlg.status.ok', { icon:'status', onFinal: () => learnCard('status', true, () => goToScene('confirmgate')) }); }
         else showDialogue('dlg.status.failAccept', { icon:'status', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('status', false, respawnAtCheckpoint) });
       } },
     { label:'ui.wrong', onClick: () => {
@@ -252,6 +268,7 @@ function askConfirmCode() {
   showInput('dlg.confirm.title', 'dlg.confirm.placeholder', (val) => {
     const norm = (val||'').trim().toUpperCase();
     if (norm === CODEBLATT.confirmCode) {
+      successFlash();
       playSequence([{ key:'gate_open', x:128, bottomY:groundY, dur:0.9, sfx:'gate', shake:1.5, shakeDur:0.5 }],
         () => { state.gateOpen = true; showDialogue('dlg.confirm.ok', { icon:'confirm', onFinal: () => learnCard('confirm', true, () => doorWalk(() => goToScene('stars'))) }); });
     } else {
@@ -278,7 +295,8 @@ function pickStar(i) {
   if (st.id === CODEBLATT.finalStar) {
     starFinale(i);
   } else {
-    playSequence([{ key:'star_shatter', x:st.x, bottomY:STAR_Y, dur:0.6, sfx:'shatter', shake:2.5, shakeDur:0.3, onStart: () => { state.starTaken = i; } }],
+    playSequence([{ key:'star_shatter', x:st.x, bottomY:STAR_Y, dur:0.6, sfx:'shatter', shake:2.5, shakeDur:0.3,
+        onStart: () => { state.starTaken = i; burst(st.x, STAR_Y, 22, { spread: 80, up: 40, g: 90, life: 0.7, color: [st.c, '#ffffff', '#1b1024'], size: 2 }); } }],
       () => showDialogue('dlg.stars.fail', { icon:'star', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('star', false, respawnAtCheckpoint) }));
   }
 }
@@ -287,7 +305,7 @@ function pickStar(i) {
    dann hebt der Stern Bruno hoch und traegt ihn oben rechts aus dem Bild.
    Blitz, Zeitlupe und Shake haengen am FX-Schalter.                     */
 /* Finale: Bruno laeuft am Boden zum gewaehlten Stern (normale Laufgeschwindigkeit
-   und -animation), haelt davor an, springt kontrolliert hoch, sammelt den Stern
+   und -animation), haelt davor an, springbrunoY = -2ert hoch, sammelt den Stern
    im Sprung ein (Licht + Partikel in der Sternfarbe, siehe drawStarsScene),
    landet wieder auf der Bodenlinie — und erst dann laeuft die bestehende
    Abschlusslogik (Dialog, Lernkarte, Endszene). Eingabe ist waehrend der
@@ -305,7 +323,7 @@ function starFinale(i) {
     { key:'bruno_walk', x: stopX, facing, dur: 0.6, frame: 3, fx:'jump', jumpH, sfx:'jump' },
     { key:'bruno_idle', x: stopX, facing, dur: 0.25, sfx:'land' }
   ], () => {
-    brunoX = stopX; brunoFacing = facing; brunoY = -2; brunoVY = 0;   // steht genau dort, wo er gelandet ist
+    brunoX = stopX; brunoFacing = facing; brunoY = 0; brunoVY = 0;   // steht genau dort, wo er gelandet ist
     showDialogue('dlg.stars.ok', { icon:'star', finalLabel:'ui.finish', onFinal: () => learnCard('star', true, () => goToScene('end')) });
   });
 }
@@ -363,9 +381,9 @@ function updateCleanup(dt) {
   cleanup.y = groundY;                                   // immer am Boden
   const speed = (W + 60) / CONFIG.cleanupSceneTime;
   if (cleanup.phase === 'exit') {
-    // aus der Endszene nach rechts hinausgleiten
-    cleanup.x += speed * 0.8 * dt;
-    if (cleanup.x > W + 40) { cleanup.phase = 'sweep'; cleanup.i = 0; enterCleanupScene(cleanup.list[0]); }
+    // sofort nach links gedreht, aus der Endszene nach links zurueck (die Level liegen "hinter" ihm)
+    cleanup.x -= speed * 0.8 * dt;
+    if (cleanup.x < -40) { cleanup.phase = 'sweep'; cleanup.i = 0; enterCleanupScbrunoY = -2.list[0]); }
   } else if (cleanup.phase === 'sweep') {
     cleanup.x -= speed * dt;
     sweepFootprints(broomTip(cleanup.x, -1).x);
@@ -383,7 +401,7 @@ function updateCleanup(dt) {
 }
 function endCleanup() {
   cleanup.active = false; cleanup.phase = null;
-  state.scene = 'end'; state.brunoHidden = false; brunoX = 128; brunoFacing = 1; brunoY = -2; brunoVY = 0;
+  state.scene = 'end'; state.brunoHidden = false; brunoX = 128; brunoFacing = 1; brunoY = 0; brunoVY = 0;
   Sfx.play('land');
   burst(128, groundY - 1, 8, { spread: 60, up: 25, g: 60, life: 0.4, color: 'rgba(220,205,175,0.85)' });
   ui.mode = null;
@@ -398,10 +416,10 @@ function finishCleanup() {
 }
 function drawCleanupBruno() {
   if (!cleanup.active) return;
-  drawSweepingBruno(cleanup.x, cleanup.phase === 'sweep' ? -1 : 1);
+  drawSweepingBruno(cleanup.x, cleanup.phase === 'return' ? 1 : -1);   // exit + sweep nach links, return nach rechts
 }
 function mappingTableHtml() {
-  const rows = ['codeblatt', 'ship', 'pattern', 'status', 'confirm', 'star', 'clean'].map(k => {
+  const rows = ['hat', 'codeblatt', 'ship', 'pattern', 'status', 'confirm', 'star', 'clean'].map(k => {
     const r = tr('map.' + k, { n: CODEBLATT.ship });
     return `<tr><td>${codeSym(k, 'tbl', '#2a1810')}${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
   }).join('');
@@ -431,7 +449,10 @@ function showEndPanel() {
 // ===================== LERNKARTEN =====================
 /* Nach jedem Erfolg/Fehlschlag eine kurze, optionale Karte: echter Schritt +
    abgewehrte Bedrohung. Abschaltbar (Prefs.data.learn), dann direkt next().  */
-const LEARN_STEP_KEY = { ship:'map.ship', pattern:'map.pattern', status:'map.status', confirm:'map.confirm', star:'map.star', clean:'map.clean' };
+/* Lernkarten: EIN Mechanismus (learnCard) fuer alle Schritte — immer nach dem
+   Ergebnisdialog, vor dem Szenenwechsel/Respawn. Schritte: hat, codeblatt, ship,
+   pattern, status, confirm, star, clean (LEARN_STEP_KEY -> Name in der Tabelle). */
+const LEARN_STEP_KEY = { hat:'map.hat', codeblatt:'map.codeblatt', ship:'map.ship', pattern:'map.pattern', status:'map.status', confirm:'map.confirm', star:'map.star', clean:'map.clean' };
 function learnCard(step, ok, next) {
   if (!Prefs.data.learn) { next(); return; }
   const render = () => {
@@ -504,7 +525,7 @@ function renderCodeblattCard(side, isFirstTime) {
     if (isFirstTime && !state.hasCodeblatt) {
       showDialogue('dlg.codeblatt.intro', {
         finalLabel: 'ui.understood',
-        onFinal: () => { state.hasCodeblatt = true; document.getElementById('codeblattBtn').classList.remove('hidden'); goToScene('river'); }
+        onFinal: () => { state.hasCodeblatt = true; document.getElementById('codeblattBtn').classList.remove('hidden'); learnCard('codeblatt', true, () => goToScene('river')); }
       });
     } else { ui.mode = ui.prevMode !== undefined ? ui.prevMode : null; ui.prevMode = undefined; restoreFocus(); }
   };
@@ -585,7 +606,7 @@ function openMenu() {
     document.getElementById('mMusic').onclick = () => { Sfx.resume(); Music.setEnabled(!Prefs.data.music); syncTopbar(); syncM(); };
     document.getElementById('mLearn').onclick = () => { Prefs.data.learn = !Prefs.data.learn; Prefs.save(); syncTopbar(); syncM(); };
     overlay.querySelectorAll('[data-mlang]').forEach(b => { b.onclick = () => { setLanguage(b.getAttribute('data-mlang')); render(); }; });
-    focusFirst(overlay);
+    focusFirst(overlay);brunoY = -2
   };
   render();
   announce(tr('menu.title'));
@@ -606,7 +627,7 @@ function quitToTitle() {
   cleanup.active = false; cleanup.phase = null;
   document.getElementById('codeblattBtn').classList.add('hidden');
   rollCodeblatt();
-  state.scene = 'home'; brunoX = scenes.home.startX; brunoY = -2; brunoVY = 0; brunoFacing = 1;
+  state.scene = 'home'; brunoX = scenes.home.startX; brunoY = 0; brunoVY = 0; brunoFacing = 1;
   Music.setScene('title');
   ui.mode = 'modal';
   updateProgress();
@@ -752,10 +773,41 @@ window.addEventListener('keydown', e => {
 /* Fortschrittsanzeige (UI-Overlay, oben links unter der Leiste): Etappe n von 8,
    aktualisiert bei jedem Szenenwechsel (applyScene). Reiner Fortschritt — keine
    Codes, keine Loesungen. Auf dem Titelbild ausgeblendet.                    */
+/* Steuerungshinweis: erscheint nach CONFIG.idleHintAfter s ohne Eingabe — nur wenn
+   Bruno frei steuerbar ist (kein Panel/Menue/Modal, keine Sequenz, kein Wipe, kein
+   Aufraeumen). Verschwindet bei der naechsten Eingabe sofort, sonst nach
+   CONFIG.idleHintShow s; danach erst wieder nach echter Eingabe + erneuter Pause.
+   Tasten kommen aus KEYBINDS (engine.js), nicht aus festen Texten.            */
+const idleHint = { t: 0, shown: false, armed: true };
+const KEY_LABELS = { KeyA: 'A', KeyD: 'D', KeyW: 'W', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', Space: null };
+function keyLabel(code) { return KEY_LABELS[code] === null ? tr('key.space') : (KEY_LABELS[code] || code); }
+function noteInput() { idleHint.t = 0; idleHint.armed = true; if (idleHint.shown) hideCtrlHint(); }
+function hideCtrlHint() { idleHint.shown = false; const el = document.getElementById('ctrlHint'); if (el) el.classList.add('hidden'); }
+function showCtrlHint() {
+  const el = document.getElementById('ctrlHint'); if (!el) return;
+  const row = (codes, txt) => `<span class="row">${codes.map(c => `<b class="k">${keyLabel(c)}</b>`).join('')}<span>${txt}</span></span>`;
+  el.innerHTML = row(KEYBINDS.left, tr('hint.left')) + row(KEYBINDS.right, tr('hint.right')) + row(KEYBINDS.jump, tr('hint.jump'));
+  el.classList.remove('hidden'); idleHint.shown = true;
+}
+function updateIdleHint(dt) {
+  const free = ui.mode === null && !sequence && !transition.active && !cleanup.active;
+  if (!free) { idleHint.t = 0; if (idleHint.shown) hideCtrlHint(); return; }
+  idleHint.t += dt;
+  if (!idleHint.shown && idleHint.armed && idleHint.t >= CONFIG.idleHintAfter) showCtrlHint();
+  if (idleHint.shown && idleHint.t >= CONFIG.idleHintAfter + CONFIG.idleHintShow) { hideCtrlHint(); idleHint.armed = false; }
+}
+/* Fortschritt sitzt unten mittig; weicht nach oben aus, wenn der Hotspot-Knopf dort
+   steht, und tritt hinter Panels/Modal/Menue zurueck (unsichtbar).              */
+function syncProgressPos() {
+  const el = document.getElementById('progress'); if (!el || el.classList.contains('hidden')) return;
+  const prompt = !document.getElementById('hotspotPrompt').classList.contains('hidden');
+  el.classList.toggle('lift', prompt);
+  el.classList.toggle('dim', ui.mode === 'panel' || ui.mode === 'modal' || (typeof menuOpen === 'function' && menuOpen()));
+}
 const PROGRESS_MAX = 8;
 function updateProgress() {
   const el = document.getElementById('progress'); if (!el) return;
-  const lv = LEVELS[state.scene];
+  brunoY = -2LEVELS[state.scene];
   const show = !!lv && ui.mode !== 'modal';
   el.classList.toggle('hidden', !show);
   if (!show) return;
@@ -786,7 +838,8 @@ const LEVELS = {
    onEnter (Dialoge!) feuert erst, wenn das Bild wieder frei ist.        */
 const transition = { active:false, id:null, t:0, applied:false, quick:false };
 function transitionTimes() {
-  return transition.quick ? { wipe:0, hold:0.3 } : { wipe:CONFIG.wipeTime, hold:CONFIG.holdTime };
+  // ohne FX: kurzes Ab- und Aufblenden statt Wipe (kein harter Schnitt)
+  return transition.quick ? { wipe:0.22, hold:0.12 } : { wipe:CONFIG.wipeTime, hold:CONFIG.holdTime };
 }
 function goToScene(id) {
   clearUI(); sequence = null; nearestHotspot = null; brunoVel = 0; timeScale = 1;
@@ -797,7 +850,6 @@ function goToScene(id) {
   transition.active = true; transition.id = id; transition.t = 0; transition.applied = false;
   transition.quick = !Prefs.data.shake;
   ui.mode = 'transition';
-  if (transition.quick) applyScene(id);
 }
 // eigentlicher Szenenwechsel (unter dem Wipe); setzt den Checkpoint
 function applyScene(id) {
@@ -807,7 +859,7 @@ function applyScene(id) {
   updateProgress();
   state.enemyState = 'alive'; state.starTaken = -1; state.starCollected = false; state.starCollectT = -1;
   state.boatGone = null; state.brunoHidden = false; state.gateOpen = false; state.broomTaken = false;
-  brunoY = -2; brunoVY = 0; hopTimer = 1.8;
+  brunoY = 0; brunoVY = 0; hopTimer = 1.8;
   shake.t = 0; particles.length = 0; sceneTime = 0;
   recordCheckpoint(id);
   const lv = LEVELS[id];
@@ -838,9 +890,14 @@ function drawTransition() {
   const tt = transition.t;
   const ease = (p) => p * p * (3 - 2 * p);
   ctx.fillStyle = '#06050a';
-  if (wipe > 0 && tt < wipe) {
+  if (transition.quick) {
+    // Blende: ab- und wieder aufblenden (Alpha statt Wischkante)
+    const a = tt < wipe ? ease(tt / wipe) : tt < wipe + hold ? 1 : 1 - ease(Math.min(1, (tt - wipe - hold) / wipe));
+    ctx.fillStyle = `rgba(6,5,10,${a})`; ctx.fillRect(0, 0, W, H);
+    Labels.setClip(a > 0.5 ? W : 0, 0);
+  } else if (wipe > 0 && tt < wipe) {
     const p = ease(tt / wipe); const wdt = Math.round(p * W);
-    ctx.fillRect(W - wdt, 0, wdt + 1, H);
+    ctbrunoY = -2W - wdt, 0, wdt + 1, H);
     Labels.setClip(0, wdt);                       // DOM-Labels gleich mit abdecken
   } else if (tt < wipe + hold) {
     ctx.fillRect(0, 0, W, H);
@@ -897,7 +954,7 @@ function update(dt) {
     brunoVY += CONFIG.gravity * dt;
     brunoY -= brunoVY * dt;
     if (brunoY <= 0) {
-      brunoY = -2; brunoVY = 0;
+      brunoY = 0; brunoVY = 0;
       Sfx.play('land');
       burst(brunoX, groundY - 1, 6, { spread: 50, up: 20, g: 60, life: 0.35, color: 'rgba(220,205,175,0.85)' });
     }

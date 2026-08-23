@@ -3,7 +3,7 @@
 make_tower.py — magischer Runenturm in Seitenansicht (assets/props/tower.png)
 
 Stil nach tower_reference.png: grosse blaugraue Steinquader mit Fugen, Risse,
-Verwitterung, dunkle Holzbalken, Rundbogen aus Keilsteinen, schmale Fenster,
+Verwitterung, Eisenbeschlaege, eine Lage Runensteine, Rundbogen aus Keilsteinen, schmale Fenster,
 Steinbrocken und Runenplatten am Fuss. Die leuchtenden Runen, das Tor, die
 Runenkonsole und das Licht zeichnet das Spiel selbst (animiert) — das Sprite
 liefert nur das Mauerwerk. 160x126 px; Turmkoerper x 30..129, Bogen mittig.
@@ -24,7 +24,8 @@ MORTAR = (43, 47, 58, 255)
 STONES = [(91, 100, 114), (104, 114, 130), (82, 92, 106), (112, 122, 138), (74, 82, 97)]
 CRACK = (48, 52, 64, 255)
 WEATHER = (128, 138, 154, 255)
-WOOD = (107, 66, 38, 255); WOOD_D = (74, 47, 24, 255); WOOD_HI = (138, 90, 46, 255)
+IRON = (52, 58, 72, 255); IRON_D = (30, 34, 44, 255); IRON_HI = (118, 128, 146, 255)
+RUNE_ST = (70, 80, 100, 255); RUNE_D = (44, 50, 64, 255); RUNE_HI = (150, 170, 205, 255)
 WINDOW = (38, 34, 58, 255); WINDOW_L = (96, 86, 140, 255)
 KEY = (122, 132, 150); KEY_D = (86, 94, 110)
 
@@ -91,13 +92,21 @@ def main():
     # Schwelle
     d.rectangle([ax0 - 8, BASE - 2, ax1 + 7, BASE - 1], fill=(112, 122, 138, 255))
 
-    # ---- Holzbalken: senkrechte Kanten + zwei Diagonalen oben ----
+    # ---- kein Holz: dunkle Eisenbeschlaege an den Kanten, Runenstein-Lage statt Balken ----
     for x in (TX0 + 2, TX1 - 6):
-        d.rectangle([x, 0, x + 3, BASE - ARCH_H - 10], fill=WOOD)
-        d.line([x, 0, x, BASE - ARCH_H - 10], fill=WOOD_HI); d.line([x + 3, 0, x + 3, BASE - ARCH_H - 10], fill=WOOD_D)
-    for (x0, y0, x1, y1) in [(TX0 + 6, 40, ARCH_CX - 18, 4), (TX1 - 7, 40, ARCH_CX + 18, 4)]:
-        d.line([x0, y0, x1, y1], fill=WOOD, width=3); d.line([x0, y0 - 1, x1, y1 - 1], fill=WOOD_HI)
-    d.rectangle([TX0 + 6, 42, TX1 - 7, 45], fill=WOOD); d.line([TX0 + 6, 42, TX1 - 7, 42], fill=WOOD_HI)
+        d.rectangle([x, 0, x + 3, BASE - ARCH_H - 10], fill=IRON)
+        d.line([x, 0, x, BASE - ARCH_H - 10], fill=IRON_HI); d.line([x + 3, 0, x + 3, BASE - ARCH_H - 10], fill=IRON_D)
+        for yy in range(3, BASE - ARCH_H - 10, 7):
+            px[x + 1, yy] = IRON_HI; px[x + 2, yy + 1] = IRON_D                  # Nieten
+    d.rectangle([TX0 + 6, 41, TX1 - 7, 46], fill=RUNE_ST)                        # Runenstein-Lage
+    d.line([TX0 + 6, 41, TX1 - 7, 41], fill=RUNE_HI); d.line([TX0 + 6, 46, TX1 - 7, 46], fill=RUNE_D)
+    for rx in range(TX0 + 9, TX1 - 9, 11):
+        d.line([rx, 41, rx, 46], fill=RUNE_D)                                    # Fugen
+        for (gx, gy) in [(0, 0), (1, 1), (2, 0), (1, 2), (1, 3)]:                # kleine Ritzrune
+            px[rx + 4 + gx, 42 + gy] = RUNE_HI
+    for (mx, my) in [(TX0 + 8, 8), (TX1 - 13, 8), (ARCH_CX - 3, 24)]:            # Metallplatten mit Nieten
+        d.rectangle([mx, my, mx + 5, my + 5], fill=IRON, outline=IRON_D)
+        px[mx + 1, my + 1] = IRON_HI; px[mx + 4, my + 4] = IRON_HI
     # ---- zwei schmale Fenster ----
     for (wx, wy) in [(ARCH_CX - 22, 18), (ARCH_CX + 18, 54)]:
         d.rectangle([wx - 2, wy - 1, wx + 3, wy + 11], fill=OUT)

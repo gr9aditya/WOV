@@ -155,7 +155,110 @@ function drawWaterStrip(y,h,base,hi,lo) {
   }
 }
 
-function bgOrElse(key, placeholderFn) { if (Assets.has(key)) { ctx.drawImage(Assets.imgs[key],0,0,W,H); return true; } placeholderFn(); return false; }
+/* ===================== Szenen-Look (nur Optik) =====================
+   light: Lichtrichtung (-1 = Sonne links -> Schattenseite rechts, 1 = umgekehrt),
+   gilt fuer alle Sprites (drawSprite schattiert die abgewandte Haelfte) und die
+   Bodenschatten. haze: Luftdunst ueber dem Hintergrund (heller, kontrastaermer),
+   tint: Farbstimmung ueber der ganzen Szene (gemeinsame Grundpalette, pro Szene
+   ein Akzent). fg: Silhouetten am unteren Bildrand (dunkler, kontrastreicher
+   Vordergrund). Gameplay, Positionen und Texte bleiben unberuehrt.         */
+const SCENE_LOOK = {
+  inside:      { light: 1,  tint: 'rgba(255,170,80,0.10)',  haze: null,                      fg: null },
+  home:        { light: -1, tint: 'rgba(120,170,50,0.08)',  haze: 'rgba(205,228,255,0.22)',  fg: 'grass', clouds: true },
+  river:       { light: -1, tint: 'rgba(90,160,130,0.08)',  haze: 'rgba(205,228,255,0.22)',  fg: 'reeds', clouds: true },
+  sword:       { light: -1, tint: 'rgba(140,180,50,0.10)',  haze: 'rgba(205,228,255,0.22)',  fg: 'grass', clouds: true },
+  gate:        { light: -1, tint: null,                     haze: 'rgba(190,225,170,0.16)',  fg: 'leaves', clouds: true },
+  fork:        { light: 1,  tint: 'rgba(60,90,70,0.12)',    haze: 'rgba(120,140,150,0.18)',  fg: 'grass', clouds: true },
+  spider:      { light: 1,  tint: 'rgba(20,30,90,0.22)',    haze: 'rgba(40,44,90,0.26)',     fg: 'rocks' },
+  croc:        { light: -1, tint: 'rgba(50,80,60,0.20)',    haze: 'rgba(90,120,110,0.22)',   fg: 'reeds' },
+  confirmgate: { light: 1,  tint: 'rgba(90,40,160,0.10)',   haze: null,                      fg: 'rocks' },
+  stars:       { light: 1,  tint: 'rgba(30,40,120,0.10)',   haze: null,                      fg: null },
+  end:         { light: -1, tint: 'rgba(255,170,60,0.14)',  haze: 'rgba(255,220,170,0.18)',  fg: 'grass', clouds: true }
+};
+/* ziehende Wolkenschleier ueber dem Foto-Himmel (dezent, zeitbasiert, endlos) */
+function drawCloudWisps() {
+  const look = sceneLook();
+  if (!look.clouds) return;
+  const wisps = [[0, 14, 54, 5, 0.09], [110, 24, 40, 4, 0.07], [190, 9, 62, 6, 0.08], [70, 36, 30, 3, 0.05]];
+  for (const [bx, by, w, h, a] of wisps) {
+    const x = ((bx - t * 0.035 * (1 + h / 6)) % (W + w) + W + w) % (W + w) - w;
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fillRect(Math.round(x), by, w, h); ctx.fillRect(Math.round(x) + 6, by - 2, w - 14, 2); ctx.fillRect(Math.round(x) + 3, by + h, w - 8, 1);
+  }
+}
+function sceneLook() { return SCENE_LOOK[state.scene] || SCENE_LOOK.home; }
+/* weicher Bodenschatten (Ellipse auf der Bodenlinie); lift = Hoehe ueber dem Boden -> kleiner/schwaecher */
+function groundShadow(x, w, alpha, lift) {
+  const k = Math.max(0, 1 - (lift || 0) / 40);
+  if (k <= 0) return;
+  ctx.fillStyle = `rgba(0,0,0,${(alpha || 0.28) * k})`;
+  ctx.beginPath(); ctx.ellipse(Math.round(x) + sceneLook().light * -2, groundY + 1.5, (w || 14) * (0.7 + 0.3 * k), 2.6, 0, 0, Math.PI * 2); ctx.fill();
+}
+/* Luftdunst: Hintergrund oben heller und kontrastaermer, bis kurz ueber die Bodenlinie */
+function drawHaze() {
+  const look = sceneLook();
+  if (!look.haze) return;
+  const g = ctx.createLinearGradient(0, 0, 0, groundY - 10);
+  g.addColorStop(0, look.haze); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, groundY - 10);
+}
+/* Vordergrund: dunklerer Boden nach unten + Silhouetten am unteren Bildrand (statisch gerastert) */
+function drawForeground() {
+  const look = sceneLook();
+  if (!look.fg) return;
+  staticLayer('fg_' + look.fg + '_' + state.scene, () => {
+    const g = ctx.createLinearGradient(0, groundY + 4, 0, H);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.38)');
+    ctx.fillStyle = g; ctx.fillRect(0, groundY + 4, W, H - groundY - 4);
+    const dark = look.fg === 'rocks' ? '#0c0a12' : look.fg === 'reeds' ? '#101a12' : '#0f180c';
+    ctx.fillStyle = dark;
+    if (look.fg === 'grass' || look.fg === 'leaves') {
+      for (let i = 0; i < 46; i++) {                                       // Grasbueschel-Silhouetten
+        const x = (rnd(i * 3.3 + 7) * (W + 20)) | 0, h = 5 + ((rnd(i * 1.7) * 9) | 0), w = 2 + ((rnd(i * 2.1) * 3) | 0);
+        ctx.beginPath(); ctx.moveTo(x - w, H); ctx.lineTo(x + (rnd(i) - 0.5) * 4, H - h); ctx.lineTo(x + w, H); ctx.closePath(); ctx.fill();
+      }
+      if (look.fg === 'leaves') {                                           // Ast mit Blaettern links unten
+        ctx.fillRect(0, H - 9, 44, 3); ctx.fillRect(30, H - 14, 22, 3);
+        for (const [lx, ly] of [[8, H - 14], [18, H - 12], [28, H - 17], [40, H - 19], [50, H - 15], [14, H - 5]]) { ctx.beginPath(); ctx.ellipse(lx, ly, 5, 3, -0.5, 0, Math.PI * 2); ctx.fill(); }
+      }
+    } else if (look.fg === 'reeds') {
+      for (let i = 0; i < 24; i++) {                                       // Schilf
+        const x = (rnd(i * 4.1 + 3) * (W + 10)) | 0, h = 6 + ((rnd(i * 2.3) * 8) | 0);
+        ctx.fillRect(x, H - h, 1, h); ctx.fillRect(x - 1, H - h, 3, 4);
+      }
+    } else if (look.fg === 'rocks') {
+      for (let i = 0; i < 12; i++) {                                       // Felsbrocken
+        const x = (rnd(i * 5.7 + 11) * (W + 30)) | 0 - 15, w = 10 + ((rnd(i * 1.3) * 22) | 0), h = 4 + ((rnd(i * 3.1) * 8) | 0);
+        ctx.beginPath(); ctx.ellipse(x, H + 1, w, h, 0, Math.PI, 0); ctx.fill();
+      }
+    }
+  });
+}
+/* Farbstimmung der Szene ueber der ganzen Welt (dezent) */
+function drawMood() {
+  const look = sceneLook();
+  if (!look.tint) return;
+  ctx.fillStyle = look.tint; ctx.fillRect(0, 0, W, H);
+}
+
+/* Foto-Hintergruende: die sichtbare Bodenkante (erste helle Zeile der Bodenflaeche,
+   per Script aus den PNGs gemessen) liegt nicht in jedem Bild auf groundY (112):
+     alpen.png 113, fork.png 113, spider.png 114, croc.png 112, stars.png 112.
+   Das Bild wird um die Differenz nach oben versetzt, damit die Kante exakt auf der
+   Bodenlinie liegt und Brunos unterste Pixelzeile (111) direkt darauf steht; die
+   freiwerdenden Zeilen unten werden mit der letzten Bildzeile aufgefuellt.
+   Bodenhoehe (groundY) und Figurenpositionen bleiben unveraendert.            */
+const BG_FLOOR_ROW = { bg_home: 113, bg_river: 113, bg_sword: 113, bg_gate: 113, bg_confirmgate: 113, bg_end: 113, bg_fork: 113, bg_spider: 114, bg_croc: 112, bg_stars: 112 };
+function bgOrElse(key, placeholderFn) {
+  if (Assets.has(key)) {
+    const img = Assets.imgs[key], dy = groundY - (BG_FLOOR_ROW[key] || groundY);
+    ctx.drawImage(img, 0, dy, W, H);
+    if (dy < 0) ctx.drawImage(img, 0, img.height - 1, img.width, 1, 0, H + dy, W, -dy);
+    drawHaze(); drawCloudWisps();
+    return true;
+  }
+  placeholderFn(); drawHaze(); return false;
+}
 
 /* Statische Kulissenteile einmal in einen Offscreen-Canvas zeichnen und
    danach nur noch blitten (A1: keine hundert fillRects pro Frame). fn()
@@ -221,11 +324,11 @@ function broomTip(x, facing) { return { x: x + facing * 8 + facing * 17, y: grou
 function drawSweepingBruno(x, facing) {
   const y = groundY;
   ctx.save();
+  groundShadow(x, 13, 0.3, 0);
   ctx.translate(x, y); ctx.rotate(facing * 0.1); ctx.translate(-x, -y);    // in Fahrtrichtung lehnen
-  drawHeldSword(x, y, facing, 0, 'bruno_idle', 0, 'back');
+  // beim Fegen nur der Besen in der Pfote — kein Schwert (state.hasSword bleibt, wird danach wieder gezeichnet)
   if (!drawSprite('bruno_idle', 0, x, y, facing)) drawBrunoPlaceholder(x, y, facing, null);
   drawHat(x, y, facing, 'bruno_idle', 0);
-  drawHeldSword(x, y, facing, 0, 'bruno_idle', 0, 'front');
   // Besen: Stielende in der vorderen Pfote, Borsten vorn am Boden
   const s = pixSprite('broom');
   if (s) {
@@ -259,6 +362,7 @@ function drawBruno() {
   const key = brunoY > 0 ? 'bruno_walk' : brunoAnim.key;
   const fr = brunoY > 0 ? 3 : brunoAnim.frame;
   const by = groundY - bob - Math.round(brunoY);
+  groundShadow(brunoX, 13, 0.3, brunoY);
   // getragenes Schwert liegt hinter der Schulter -> zuerst zeichnen
   drawHeldSword(brunoX, by, brunoFacing, 0, key, fr, 'back');
   if (!drawSprite(key, fr, brunoX, by, brunoFacing))
@@ -326,7 +430,9 @@ function swordAngle(key, swing) {
    zeichnet nur, wenn das Schwert in dieser Ebene liegt — drawBruno ruft
    beide Ebenen um das Sprite herum auf.  force = auch ohne state.hasSword
    (Aufheb-Sequenz).                                                     */
-function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force) {
+function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force, scale) {
+  const spec0 = ASSET_MANIFEST['sword'];
+  const SC = scale || spec0.scale || 1;             // Sheet ist auf Brunos Groesse gezeichnet -> Massstab 1
   if (!state.hasSword && !force) return;
   const anchor = handAnchor(animKey, frame);
   const inFront = anchor.front || swing > 0.02;
@@ -346,8 +452,8 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
     // Parierstange 5, Klinge 6-13). In der Pfote: Frame 0, vertikal
     // gespiegelt -> Klinge nach oben, Drehpunkt auf dem Griff (Zeile 3).
     ctx.scale(1, -1);
-    const sw = Math.round(spec.w * CHAR_SCALE), sh = Math.round(spec.h * CHAR_SCALE);   // Schwert: exakt derselbe Faktor wie Bruno
-    ctx.drawImage(img, 0, 0, spec.w, spec.h, -Math.round(sw / 2), -Math.round(3 * CHAR_SCALE), sw, sh);
+    const sw = Math.round(spec.w * SC), sh = Math.round(spec.h * SC);
+    ctx.drawImage(img, 0, 0, spec.w, spec.h, -Math.round(sw / 2), -Math.round((spec.pivot || 3) * SC), sw, sh);   // Drehpunkt = Griffmitte
   } else {
     ctx.fillStyle = PAL.hilt; ctx.fillRect(-1, -2, 2, 4);
     ctx.fillStyle = PAL.sword; ctx.fillRect(-1, -11, 2, 9);
@@ -359,7 +465,7 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
     ctx.strokeStyle = `rgba(255,255,255,${0.5 * Math.sin(swing * Math.PI)})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(pawX, pawY, Math.round(11 * CHAR_SCALE), a0 - (facing < 0 ? Math.PI : 0), angle - (facing < 0 ? Math.PI : 0), facing < 0);
+    ctx.arc(pawX, pawY, Math.round(spec.h * 0.75), a0 - (facing < 0 ? Math.PI : 0), angle - (facing < 0 ? Math.PI : 0), facing < 0);
     ctx.stroke();
   }
 }

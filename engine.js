@@ -29,17 +29,20 @@ const ASSET_MANIFEST = {
   // Schwert: 8 Frames Drehung, HALBE Groesse (sword.gif -> gif2sheet --native 16x16),
   // damit es zu Bruno passt. Auf dem Altar dreht es sich, in der Pfote Frame 0.
   // Das grosse Sheet (assets/props/sword.png, 12x29) bleibt als Reserve liegen.
-  sword:           { src:'assets/props/sword_small.png', frames:8, fps:6, w:6, h:14, loop:true },
+  // Schwert (tools/make_sword.py, 10x30): Knauf Zeile 0, Griff 1..6 (pivot = Griffmitte 4), Parierstange 7..8,
+  // Klinge 9..29 — 30 px lang, ~Brunos Koerperhoehe. Gleiches Sheet am Altar und in der Pfote, Massstab 1 (nicht skaliert).
+  sword:           { src:'assets/props/sword_big.png', frames:8, fps:6, w:10, h:30, loop:true, noShade:true, scale:1, pivot:4 },
+  sword_altar:     { src:'assets/props/sword_big.png', frames:8, fps:6, w:10, h:30, loop:true, noShade:true, scale:1, pivot:4 },
   // Hut (Fedora, 16x9, per Pillow erzeugt): haengt am Haken, danach Overlay auf Brunos Kopf (drawHat)
-  hat:             { src:'assets/props/hat.png', frames:1, fps:1, w:16, h:9, loop:false },
+  hat:             { src:'assets/props/hat.png', frames:1, fps:1, w:16, h:9, loop:false, noShade:true },
   // Runenturm (tools/make_tower.py): Mauerwerk mit Rundbogen, 160x126, unten-mittig auf groundY+2
   tower:           { src:'assets/props/tower.png', frames:1, fps:1, w:160, h:126, loop:false },
   // Ruderboot in Seitenansicht (tools/make_boat.py, 72x29): naher Bordrand = Zeile 9 (BOAT_RIM), Kiel = Zeile 28.
   // boat_front = nur die nahe Bordwand ab Zeile 9 — liegt waehrend der Fahrt VOR Bruno (Beine im Boot).
   boat:            { src:'assets/props/boat.png',       frames:1, fps:1, w:72, h:29, loop:false },
-  boat_front:      { src:'assets/props/boat_front.png', frames:1, fps:1, w:72, h:29, loop:false },
-  // Baumtor der Musterwahl (tools/make_treegate.py): zwei Baeume mit Astbogen, 208x124, unten-mittig auf (128, groundY+4)
-  treegate:        { src:'assets/props/treegate.png', frames:1, fps:1, w:208, h:124, loop:false },
+  boat_front:      { src:'assets/props/boat_front.png', frames:1, fps:1, w:72, h:29, loop:false, noShade:true },
+  // Baumtor der Musterwahl (tools/make_treegate.py): zwei Baeume mit Astbogen, 233x139, unten-mittig auf (128, groundY+4)
+  treegate:        { src:'assets/props/treegate.png', frames:1, fps:1, w:233, h:139, loop:false },
   // Brunos Chalet (tools/make_chalet.py): 112x92, unten-mittig auf (53, groundY) — gleiche Lage wie die Code-Zeichnung
   chalet:          { src:'assets/props/chalet.png', frames:1, fps:1, w:112, h:92, loop:false },
   // --- Enemies ---
@@ -175,6 +178,8 @@ function loopFrame(key) {
 const CHAR_SCALE = CONFIG.charScale;
 function spriteScale(key) {
   if (!key) return 1;
+  const spec = ASSET_MANIFEST[key];
+  if (spec && spec.scale) return spec.scale;            // eigener Massstab (z.B. Altar-Schwert)
   if (key.indexOf('bruno') === 0 || key.indexOf('spider') === 0 || key.indexOf('croc') === 0 || key === 'sword' || key === 'hat') return CHAR_SCALE;
   return 1;
 }
@@ -202,6 +207,14 @@ function drawSprite(key, frame, cx, bottomY, facing) {
     ctx.drawImage(img, sx, 0, spec.w, spec.h, Math.round(cx - dw / 2), top, dw, dh);
   }
   ctx.restore();
+  // Lichtrichtung der Szene: die vom Licht abgewandte Haelfte des Sprites leicht abdunkeln
+  if (!spec.noShade && typeof sceneLook === 'function') {
+    const light = sceneLook().light;
+    ctx.save(); ctx.beginPath();
+    ctx.rect(light < 0 ? Math.round(cx) : Math.round(cx - dw / 2), top, Math.ceil(dw / 2), dh); ctx.clip();
+    drawSpriteTinted(key, frame, cx, bottomY, facing, '#06040c', 0.16);
+    ctx.restore();
+  }
   return true;
 }
 
@@ -240,7 +253,7 @@ function drawSpriteTinted(key, frame, cx, bottomY, facing, color, alpha) {
   ctx.restore();
   return true;
 }
-
+brunoY = -2
 // ===================== GAME STATE =====================
 /* enemyState: 'alive' (wartet) | 'dead' (liegt da, Statuswert noch nicht
    geprueft) | 'verified' (Sieg bestaetigt). Der Gegner verschwindet erst
@@ -253,7 +266,7 @@ const ui = { mode:null }; // null | 'panel' | 'modal' | 'anim' | 'transition'
 let timeScale = 1;        // Zeitlupe fuer das Finale (skaliert nur die Kulissen-Zeit t)
 let sceneTime = 0;        // s seit dem Aufdecken der Szene (Sonnenaufgang, Titel-Slam)
 let brunoX = 24, brunoFacing = 1;
-let brunoY = -2, brunoVY = 0;       // Sprung: Hoehe ueber dem Boden, Vertikalgeschwindigkeit (neg. = aufwaerts)
+let brunoY = 0, brunoVY = 0;       // Sprung: Hoehe ueber dem Boden, Vertikalgeschwindigkeit (neg. = aufwaerts)
 function jump() {
   if (brunoY > 0 || ui.mode !== null) return;
   brunoVY = -CONFIG.jumpVel;
@@ -310,6 +323,12 @@ function drawSequence() {
   const by = step.bottomY || groundY;
   const facing = step.facing || (step.toX !== undefined ? (step.toX >= step.fromX ? 1 : -1) : 1);
   const isBruno = step.key.indexOf('bruno') === 0;
+  // Bodenschatten der Figur (vor den Transform-Effekten, bleibt am Boden)
+  const isFigure = isBruno || step.key.indexOf('spider') === 0 || step.key.indexOf('croc') === 0;
+  if (isFigure && step.fx !== 'drown' && step.fx !== 'death') {
+    const lift = step.fx === 'jump' ? Math.sin(p * Math.PI) * (step.jumpH || 24) : step.fx === 'lunge' ? Math.sin(p * Math.PI) * 6 : 0;
+    groundShadow(sx, isBruno ? 13 : 15, 0.3, lift);
+  }
 
   // Transform-based effects so single-frame sprites still read as animated
   const fx = step.fx;
@@ -345,6 +364,7 @@ function drawSequence() {
       ctx.beginPath(); ctx.ellipse(sx, by - 14 - p * 22, 16 + p * 6, 16 + p * 6, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = `rgba(255,250,220,${g})`;
       ctx.beginPath(); ctx.ellipse(sx, by - 14 - p * 22, 8 + p * 3, 8 + p * 3, 0, 0, Math.PI * 2); ctx.fill();
+      if (p * 22 < 12) { ctx.beginPath(); ctx.rect(0, 0, W, groundY - 12); ctx.clip(); }   // steckt noch im Altar
       ctx.translate(sx, by);
       ctx.rotate(-0.18 * (1 - p));
       ctx.translate(-sx, -by - p * 22);
@@ -374,7 +394,7 @@ function drawSequence() {
   if (isBruno) {
     if (step.key === 'bruno_attack') swing = p;
     if (fx === 'raise') { anchorKey = 'bruno_raise'; }
-    drawHeldSword(sx, by, facing, swing, anchorKey, f, 'back', fx === 'raise' || fx === 'enter');
+    drawHeldSword(sx, by, facing, swing, anchorKey, f, 'back', fx === 'raise' || fx === 'enter', step.swordScale);
   }
 
   if (!drawSprite(step.key, f, sx, by, facing)) {
@@ -384,7 +404,7 @@ function drawSequence() {
   if (isBruno) drawHat(sx, by, facing, step.key, f);
 
   // Schwert vor Bruno (Hieb, hochgehalten)
-  if (isBruno) drawHeldSword(sx, by, facing, swing, anchorKey, f, 'front', fx === 'raise' || fx === 'enter');
+  if (isBruno) drawHeldSword(sx, by, facing, swing, anchorKey, f, 'front', fx === 'raise' || fx === 'enter', step.swordScale);
 
   if (fx === 'hit') {
     // weisser Blitz NUR auf dem Sprite (ueber den Tint-Puffer),
@@ -417,6 +437,7 @@ window.addEventListener('keydown', e => {
     return;
   }
   keys[e.code] = true;
+  noteInput();                                          // echte Spielereingabe -> Steuerungshinweis zuruecksetzen
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
 
   // ---- Tastatur-UX ------------------------------------------------
@@ -432,7 +453,7 @@ window.addEventListener('keydown', e => {
   // E im Codeblatt: schliessen
   if (e.code === 'KeyE' && ui.mode === 'modal') { closeCodeblatt(); return; }
   // Leertaste / W / Pfeil hoch: springen (nur im freien Spiel)
-  if ((e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') && ui.mode === null) { jump(); return; }
+  if (KEYBINDS.jump.includes(e.code) && ui.mode === null) { jump(); return; }
   // E / Enter: Hotspot benutzen (nur im freien Spiel, nur am Boden)
   if ((e.code === 'KeyE' || e.code === 'Enter') && ui.mode === null) {
     if (nearestHotspot && brunoY <= 0) { const hs = nearestHotspot; nearestHotspot = null; hs.onInteract(); }
@@ -454,6 +475,8 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-function left(){ return keys['ArrowLeft']||keys['KeyA']; }
-function right(){ return keys['ArrowRight']||keys['KeyD']; }
+/* Tastenbelegung — einzige Quelle fuer Steuerung UND Steuerungshinweis (showCtrlHint) */
+const KEYBINDS = { left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['Space', 'KeyW', 'ArrowUp'] };
+function left(){ return KEYBINDS.left.some(k => keys[k]); }
+function right(){ return KEYBINDS.right.some(k => keys[k]); }
 
