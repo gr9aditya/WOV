@@ -61,17 +61,18 @@ const ASSET_MANIFEST = {
   // --- FX ---
   splash:          { src:null, frames:5, fps:12, w:20, h:16, loop:false },
   slash:           { src:null, frames:4, fps:16, w:16, h:16, loop:false },
-  // --- Backgrounds (optional full-scene art, 256x144) ---
-  bg_home:         { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_river:        { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_sword:        { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_gate:         { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_fork:         { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_spider:       { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_croc:         { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_confirmgate:  { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_stars:        { src:null, frames:1, fps:1, w:256, h:144, loop:false },
-  bg_end:          { src:null, frames:1, fps:1, w:256, h:144, loop:false }
+  // --- Backgrounds: 256x144-Bilder, Bodenlinie exakt auf groundY (tools/prepare_bg.py).
+  //     bgOrElse() blittet sie 1:1; fehlt die Datei, zeichnet der Platzhalter die Kulisse. ---
+  bg_home:         { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_river:        { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_sword:        { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_gate:         { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_fork:         { src:'assets/bg/fork.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_spider:       { src:'assets/bg/spider.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_croc:         { src:'assets/bg/croc.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_confirmgate:  { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_stars:        { src:'assets/bg/stars.png', frames:1, fps:1, w:256, h:144, loop:false },
+  bg_end:          { src:'assets/bg/alpen.png', frames:1, fps:1, w:256, h:144, loop:false }
 };
 
 // ===================== 2. ASSET MANAGER =====================

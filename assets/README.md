@@ -40,12 +40,21 @@ Transparenter Hintergrund (PNG mit Alpha). Pixel Art, kein Antialiasing.
 | star_shatter       | fx/star_shatter.png         | 5      | 16x16        | Falscher Stern zerbricht |
 | splash             | fx/splash.png               | 5      | 20x16        | Wasserspritzer |
 | slash              | fx/slash.png                | 4      | 16x16        | Schwerthieb Effekt |
-| bg_home …          | bg/home.png … (optional)    | 1      | 256x144      | Ganze Szene als Bild statt Code |
+| bg_home, bg_river, bg_sword, bg_gate, bg_confirmgate, bg_end | bg/alpen.png ✅ | 1 | 256x144 | Alpenkulisse (Bodenlinie auf groundY) |
+| bg_fork            | bg/fork.png ✅              | 1      | 256x144      | Höhle links, Sumpf rechts |
+| bg_spider          | bg/spider.png ✅            | 1      | 256x144      | Spinnenhöhle |
+| bg_croc            | bg/croc.png ✅              | 1      | 256x144      | Krokodilsumpf |
+| bg_stars           | bg/stars.png ✅             | 1      | 256x144      | Sternenkammer mit Säulen (x≈25 / 228) |
 
 Requisiten ohne Sheet (Briefkasten, Boote, Schriftrolle, Wegweiser, Symbole,
 Stern, Laterne, Totenkopf) sind Pixelkarten in `pixart.js` (`PIX`): ein
 Zeichen = ein Pixel, Palette pro Sprite. `drawPix(name, x, bottomY)` zeichnet
 sie, `pixIcon(name, scale)` liefert ein data-URL fürs DOM.
+
+Hintergründe neu ausrichten (Quellbild in hoher Auflösung -> 256x144, Boden auf groundY):
+`python3 tools/prepare_bg.py original.png -o assets/bg/alpen.png --ground 0.798 --preview`
+(`--ground` = Bodenlinie im Quellbild als Anteil der Höhe: alpen 0.798 · fork 0.824 ·
+croc 0.775 · spider 0.770 · stars 0.904).
 
 ✅ = echtes Sheet liegt drin. Die Quell-GIFs liegen jeweils daneben
 (`idle.gif`, `fisher_good.gif`, …), damit man ein Sheet jederzeit mit

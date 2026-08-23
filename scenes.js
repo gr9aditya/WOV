@@ -258,56 +258,64 @@ if (!state.hasHat) hotspotMarker(34);
 hotspotMarker(228);
 drawBruno(); }
 
-function drawHomeScene() { bgOrElse('bg_home', () => {
-  staticLayer('home_sky', () => sky());
-  drawClouds();
-  staticLayer('home_front', () => {
-    alpsBG();
-    groundStrip('#5a3a22', PAL.meadow, 5);
-    grassTufts(5);
-    // Alpwiese: Blumen
-    for (let i = 0; i < 26; i++) {
-      const x = (rnd(i * 31) * W) | 0, y = groundY + 2 + ((rnd(i * 17) * 12) | 0);
-      ctx.fillStyle = ['#ffffff', '#ffd23f', '#f2789f', '#7ec8ff'][i % 4]; ctx.fillRect(x, y, 1, 1);
-      ctx.fillStyle = PAL.grassHi; ctx.fillRect(x, y + 1, 1, 1);
-    }
-    tree(156, groundY, 0.7); tree(236, groundY, 1.0); tree(250, groundY, 0.75);
-    bush(140, groundY, 0.8); bush(190, groundY, 0.8); bush(224, groundY, 0.7);
-    chalet(groundY);
-    drawPix('mailbox', 122, groundY, 1);          // Pixel-Art, direkt neben dem Haus
+function drawHomeScene() {
+  // Kulisse: Foto (alpen.png) oder code-gezeichnete Alpen — nur Landschaft
+  bgOrElse('bg_home', () => {
+    staticLayer('home_sky', () => sky());
+    drawClouds();
+    staticLayer('home_scenery', () => {
+      alpsBG();
+      groundStrip('#5a3a22', PAL.meadow, 5);
+      grassTufts(5);
+      for (let i = 0; i < 26; i++) {
+        const x = (rnd(i * 31) * W) | 0, y = groundY + 2 + ((rnd(i * 17) * 12) | 0);
+        ctx.fillStyle = ['#ffffff', '#ffd23f', '#f2789f', '#7ec8ff'][i % 4]; ctx.fillRect(x, y, 1, 1);
+        ctx.fillStyle = PAL.grassHi; ctx.fillRect(x, y + 1, 1, 1);
+      }
+      tree(156, groundY, 0.7); tree(236, groundY, 1.0); tree(250, groundY, 0.75);
+      bush(140, groundY, 0.8); bush(190, groundY, 0.8); bush(224, groundY, 0.7);
+    });
   });
+  // Requisiten — immer: Chalet mit Rauch, Briefkasten (Hotspot x=122)
+  staticLayer('home_props', () => { chalet(groundY); drawPix('mailbox', 122, groundY, 1); });
   chaletSmoke(groundY);
-}); hotspotMarker(122); drawBruno(); }
+  hotspotMarker(122); drawBruno(); }
 
 // x = Bootsmitte, sign = Pfosten des Holzschilds auf dem Steg, phase = Schaukel-Versatz
 const BOATS = [{ x:70, num:'1234', sign:100, phase:0 }, { x:190, num:'2345', sign:160, phase:2.1 }];
-function drawRiverScene() { bgOrElse('bg_river', () => {
-  staticLayer('river_sky', () => sky());
-  drawClouds();
-  staticLayer('river_mid', () => {
-    mountainsBG();
-    // far bank across the water
-    ctx.fillStyle='#3f6b52'; ctx.fillRect(0,groundY-30,W,8);
-    ctx.fillStyle='#2f5240';
-    for (let i=0;i<20;i++){ const x=i*13; ctx.beginPath(); ctx.moveTo(x-2,groundY-30); ctx.lineTo(x,groundY-36); ctx.lineTo(x+2,groundY-30); ctx.closePath(); ctx.fill(); }
+function drawRiverScene() {
+  // Kulisse: Foto (Wald = gegenueberliegendes Ufer) oder Platzhalter mit eigenem Ufer
+  const photo = bgOrElse('bg_river', () => {
+    staticLayer('river_sky', () => sky());
+    drawClouds();
+    staticLayer('river_mid', () => {
+      mountainsBG();
+      ctx.fillStyle='#3f6b52'; ctx.fillRect(0,groundY-30,W,8);
+      ctx.fillStyle='#2f5240';
+      for (let i=0;i<20;i++){ const x=i*13; ctx.beginPath(); ctx.moveTo(x-2,groundY-30); ctx.lineTo(x,groundY-36); ctx.lineTo(x+2,groundY-30); ctx.closePath(); ctx.fill(); }
+    });
   });
-  drawWaterStrip(groundY-22,H-groundY+22,PAL.river,PAL.riverHi,PAL.riverLo);
-  staticLayer('river_front', () => {
-    // wooden jetty with plank lines and posts
-    ctx.fillStyle='#5a3a22'; ctx.fillRect(0,groundY-5,W,5);
-    ctx.fillStyle='#7a5230'; ctx.fillRect(0,groundY-5,W,2);
+  // Boden-Overlay — immer: der Raum braucht Wasser ab groundY, darueber der Steg.
+  // Mit Foto beginnt das Wasser an der Graslinie (Wiese = Ufer), ohne Foto etwas hoeher.
+  const top = photo ? groundY : groundY - 22;
+  drawWaterStrip(top, H - top, PAL.river, PAL.riverHi, PAL.riverLo);
+  staticLayer('river_jetty', () => {
+    // Steg: Planken liegen AUF groundY (Bruno steht auf der Oberkante), Pfosten im Wasser
+    ctx.fillStyle='#5a3a22'; ctx.fillRect(0,groundY,W,5);
+    ctx.fillStyle='#7a5230'; ctx.fillRect(0,groundY,W,2);
     ctx.fillStyle='#3a2418';
-    for (let x=6;x<W;x+=13) ctx.fillRect(x,groundY-5,1,5);
-    for (let x=18;x<W;x+=52){ ctx.fillStyle='#3a2418'; ctx.fillRect(x,groundY,3,10); }
-    // reeds
-    ctx.fillStyle='#4c7a3d';
-    for (let i=0;i<12;i++){ const x=(rnd(i*3)*W)|0; const h=5+((rnd(i*9)*6)|0); ctx.fillRect(x,groundY-5-h,1,h); }
+    for (let x=6;x<W;x+=13) ctx.fillRect(x,groundY,1,5);
+    for (let x=18;x<W;x+=52){ ctx.fillStyle='#3a2418'; ctx.fillRect(x,groundY+5,3,10); }
   });
+  if (!photo) {                                     // Schilf nur im Platzhalter (das Foto hat eigenes Ufer)
+    ctx.fillStyle='#4c7a3d';
+    for (let i=0;i<12;i++){ const x=(rnd(i*3)*W)|0; const h=5+((rnd(i*9)*6)|0); ctx.fillRect(x,groundY-h,1,h); }
+  }
+  // Requisiten — immer: Schilder, Boote, Fischer
   for (const b of BOATS) { drawBoatSign(b.sign, b.num); if (state.boatGone !== b.num) drawBoatHull(b.x, groundY, b.phase, true); }
-});
-drawSprite('fisher_good', loopFrame('fisher_good'), 44, groundY-4, 1);
-drawSprite('fisher_evil', loopFrame('fisher_evil'), 220, groundY-4, -1);
-hotspotMarker(70); hotspotMarker(190); drawBruno(); }
+  drawSprite('fisher_good', loopFrame('fisher_good'), 44, groundY, 1);
+  drawSprite('fisher_evil', loopFrame('fisher_evil'), 220, groundY, -1);
+  hotspotMarker(70); hotspotMarker(190); drawBruno(); }
 
 /* Ruderboot (assets/props/boat.png, 56x26): naher Bordrand (Zeile 8) liegt auf
    y, der Rumpf haengt im Wasser. bobOn: sanftes Auf/Ab plus minimale Neigung
@@ -359,37 +367,37 @@ function drawBoatWreck(x, y, p) {
   ctx.restore();
 }
 
-function drawSwordScene() { bgOrElse('bg_sword', () => {
-  staticLayer('sword_sky', () => sky());
-  drawClouds();
-  staticLayer('sword_front', () => {
-    mountainsBG();
-    groundStrip(undefined, undefined, 23); grassTufts(23);
-    tree(22,groundY,1.1); tree(52,groundY,0.7); tree(210,groundY,0.9); tree(242,groundY,1.0);
-    bush(80,groundY,0.8); bush(176,groundY,0.9);
-    drawAltar(128);
+function drawSwordScene() {
+  bgOrElse('bg_sword', () => {
+    staticLayer('sword_sky', () => sky());
+    drawClouds();
+    staticLayer('sword_scenery', () => {
+      mountainsBG();
+      groundStrip(undefined, undefined, 23); grassTufts(23);
+      tree(22,groundY,1.1); tree(52,groundY,0.7); tree(210,groundY,0.9); tree(242,groundY,1.0);
+      bush(80,groundY,0.8); bush(176,groundY,0.9);
+    });
   });
-  // light pool on the altar slab
+  // Requisiten — immer: Altar, Lichtschein, Funken, Schwert
+  staticLayer('sword_altar', () => drawAltar(128));
   const glow=0.35+Math.sin(t*0.07)*0.18;
   ctx.fillStyle=`rgba(255,232,150,${glow})`;
   ctx.beginPath(); ctx.ellipse(128,groundY-11,18,4,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle=`rgba(255,232,150,${glow*0.5})`;
   ctx.beginPath(); ctx.ellipse(128,groundY-10,30,8,0,0,Math.PI*2); ctx.fill();
-  // rising sparkles
   for (let i=0;i<5;i++){
     const sy = groundY - 12 - ((t*0.6 + i*22) % 40);
     const sx = 128 + Math.sin(t*0.05+i*2)*9;
     ctx.fillStyle=`rgba(255,240,190,${(sy-groundY+52)/40*0.7})`;
     ctx.fillRect(sx,sy,1,1);
   }
-});
-// the sword itself, standing in the altar slot, slowly turning
-// (waehrend der Aufheb-Sequenz zeichnet drawSequence() das Schwert)
-if (!state.hasSword && !sequence) {
-  if (!drawSprite('sword', loopFrame('sword'), 128, groundY-10, 1)) { ctx.fillStyle=PAL.sword; ctx.fillRect(126,groundY-24,4,14); }
-  hotspotMarker(128);
-}
-drawBruno(); }
+  // the sword itself, standing in the altar slot, slowly turning
+  // (waehrend der Aufheb-Sequenz zeichnet drawSequence() das Schwert)
+  if (!state.hasSword && !sequence) {
+    if (!drawSprite('sword', loopFrame('sword'), 128, groundY-10, 1)) { ctx.fillStyle=PAL.sword; ctx.fillRect(126,groundY-24,4,14); }
+    hotspotMarker(128);
+  }
+  drawBruno(); }
 
 // Steinaltar, in dessen Deckplatte das Schwert steckt (Pixelraster, 3 Stufen)
 function drawAltar(x) {
@@ -407,19 +415,31 @@ function drawAltar(x) {
   ctx.fillRect(x-1, g-7, 1, 1); ctx.fillRect(x+1, g-7, 1, 1); ctx.fillRect(x, g-6, 1, 1);
 }
 
-function drawGateScene() { bgOrElse('bg_gate', () => {
-  staticLayer('gate_sky', () => sky());
-  drawClouds();
-  staticLayer('gate_front', () => {
-    mountainsBG();
-    groundStrip('#4a4642', '#6b6b60', 11);
-    // flanking rubble + dead bushes for scale
-    bush(24, groundY, 0.9); bush(232, groundY, 0.8);
-    tree(12, groundY, 0.8); tree(246, groundY, 0.7);
+/* Steinboden fuer die Tor-Raeume: ab groundY ueber das Foto, die Oberkante
+   mit verstreuten Steinplaettchen ueber ~6 px in die Graslinie ausgeblendet. */
+function stoneFloor(seed) {
+  groundStrip('#4a4642', '#6b6b60', seed);
+  for (let i = 0; i < 60; i++) {
+    const x = (rnd(seed + i * 7.3) * W) | 0, d = 1 + ((rnd(seed + i * 3.1) * 6) | 0);   // d = Abstand ueber groundY
+    ctx.fillStyle = `rgba(74,70,66,${0.85 - d * 0.13})`;
+    ctx.fillRect(x, groundY - d, 2 + ((rnd(i + seed) * 3) | 0), 1);
+  }
+  ctx.fillStyle = 'rgba(107,107,96,0.35)'; ctx.fillRect(0, groundY - 1, W, 1);
+}
+function drawGateScene() {
+  const photo = bgOrElse('bg_gate', () => {
+    staticLayer('gate_sky', () => sky());
+    drawClouds();
+    staticLayer('gate_scenery', () => {
+      mountainsBG();
+      groundStrip('#4a4642', '#6b6b60', 11);
+      bush(24, groundY, 0.9); bush(232, groundY, 0.8);
+      tree(12, groundY, 0.8); tree(246, groundY, 0.7);
+    });
   });
-});
-drawGate(128);
-hotspotMarker(128); drawBruno(); }
+  if (photo) staticLayer('gate_floor', () => stoneFloor(11));   // Stein statt Wiese unter dem Tor
+  drawGate(128);
+  hotspotMarker(128); drawBruno(); }
 
 /* Tor-Zustand aus Sequenz/State: gate_open-Schritt dreht die Fluegel auf,
    danach bleiben sie offen (state.gateOpen), gate_reject pulst rot.    */
@@ -432,99 +452,88 @@ function drawGate(x) {
   gateTorches(x, groundY);
 }
 
-function drawForkScene() { bgOrElse('bg_fork', () => {
-  staticLayer('fork_sky', () => sky());
-  drawClouds();
-  staticLayer('fork_mid', () => {
-    mountainsBG();
-    groundStrip(undefined, undefined, 31); grassTufts(31);
-    // LEFT: cave mouth in a rock face
-    ctx.fillStyle='#3a2c22';
-    ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(0,40); ctx.lineTo(28,32); ctx.lineTo(74,groundY); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#2a2019';
-    ctx.beginPath(); ctx.moveTo(6,groundY); ctx.lineTo(10,48); ctx.lineTo(30,42); ctx.lineTo(64,groundY); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#0d0908';
-    ctx.beginPath(); ctx.ellipse(40,groundY,17,24,0,Math.PI,0); ctx.fill();
-    // cobwebs at the entrance
-    ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
-    for (let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(24+i*6,groundY-24); ctx.lineTo(30+i*5,groundY-8); ctx.stroke(); }
-    // RIGHT: swamp basin
-    ctx.fillStyle=PAL.swampDark; ctx.fillRect(160,groundY-2,W-160,H-groundY+2);
+function drawForkScene() {
+  // Foto: Hoehle links, Sumpf rechts. Platzhalter: code-gezeichnete Version davon.
+  const photo = bgOrElse('bg_fork', () => {
+    staticLayer('fork_sky', () => sky());
+    drawClouds();
+    staticLayer('fork_mid', () => {
+      mountainsBG();
+      groundStrip(undefined, undefined, 31); grassTufts(31);
+      ctx.fillStyle='#3a2c22';
+      ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(0,40); ctx.lineTo(28,32); ctx.lineTo(74,groundY); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#2a2019';
+      ctx.beginPath(); ctx.moveTo(6,groundY); ctx.lineTo(10,48); ctx.lineTo(30,42); ctx.lineTo(64,groundY); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#0d0908';
+      ctx.beginPath(); ctx.ellipse(40,groundY,17,24,0,Math.PI,0); ctx.fill();
+      ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
+      for (let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(24+i*6,groundY-24); ctx.lineTo(30+i*5,groundY-8); ctx.stroke(); }
+      ctx.fillStyle=PAL.swampDark; ctx.fillRect(160,groundY-2,W-160,H-groundY+2);
+    });
+    drawWaterStrip(groundY+1,H-groundY,PAL.swamp,'#5e9a4b',PAL.swampDark);
+    staticLayer('fork_front', () => {
+      ctx.fillStyle='#0d1b2a'; ctx.fillRect(0,groundY+1,160,H-groundY);
+      groundStrip(undefined,undefined,31);
+      ctx.fillStyle=PAL.swamp; ctx.fillRect(168,groundY,W-168,H-groundY);
+      ctx.fillStyle='#3f7a58'; ctx.fillRect(168,groundY,W-168,2);
+      for (let i=0;i<5;i++){ ctx.fillStyle='#4c7a3d'; ctx.fillRect(180+i*15,groundY+6+((i%2)*5),6,2); }
+      ctx.fillStyle=PAL.palmTrunk; ctx.fillRect(206,groundY-34,4,34); ctx.fillRect(238,groundY-26,3,26);
+      ctx.fillStyle=PAL.palm;
+      for (const [px_,py_,sc] of [[208,groundY-34,1],[239,groundY-26,0.75]]) {
+        for (let a=0;a<5;a++){ const ang=-0.4-a*0.5; ctx.save(); ctx.translate(px_,py_); ctx.rotate(ang); ctx.fillRect(0,-1,13*sc,3); ctx.restore(); }
+      }
+      drawPix('skull', 58, groundY - 20, 1);
+      drawPix('bones', 20, groundY + 6, 1);
+      ctx.fillStyle = '#cfd8dc'; ctx.fillRect(44, groundY - 40, 1, 14);
+      ctx.fillStyle = '#1b1024'; ctx.fillRect(42, groundY - 27, 5, 4); ctx.fillRect(40, groundY - 26, 9, 1);
+    });
+    if (pRand() < 0.06) spawnParticle(176 + pRand() * 70, groundY + 6 + pRand() * 14, { up: 12, g: -10, life: 0.8, color: ['#9fd9a0', '#ffffff'] });
   });
-  drawWaterStrip(groundY+1,H-groundY,PAL.swamp,'#5e9a4b',PAL.swampDark);
-  staticLayer('fork_front', () => {
-    ctx.fillStyle='#0d1b2a'; ctx.fillRect(0,groundY+1,160,H-groundY);
-    groundStrip(undefined,undefined,31);
-    // re-draw only left ground over the water bleed
-    ctx.fillStyle=PAL.swamp; ctx.fillRect(168,groundY,W-168,H-groundY);
-    ctx.fillStyle='#3f7a58'; ctx.fillRect(168,groundY,W-168,2);
-    for (let i=0;i<5;i++){ ctx.fillStyle='#4c7a3d'; ctx.fillRect(180+i*15,groundY+6+((i%2)*5),6,2); }
-    // palms
-    ctx.fillStyle=PAL.palmTrunk; ctx.fillRect(206,groundY-34,4,34); ctx.fillRect(238,groundY-26,3,26);
-    ctx.fillStyle=PAL.palm;
-    for (const [px_,py_,sc] of [[208,groundY-34,1],[239,groundY-26,0.75]]) {
-      for (let a=0;a<5;a++){ const ang=-0.4-a*0.5; ctx.save(); ctx.translate(px_,py_); ctx.rotate(ang); ctx.fillRect(0,-1,13*sc,3); ctx.restore(); }
-    }
-    // Wegweiser aussen: links zur Hoehle, rechts zum Sumpf
-    drawPix('arrow_sign', 96, groundY, 1);
-    drawPix('arrow_sign', 160, groundY, -1);
-    // Hoehleneingang: Totenkopf, Knochen, haengende Spinne
-    drawPix('skull', 58, groundY - 20, 1);
-    drawPix('bones', 20, groundY + 6, 1);
-    ctx.fillStyle = '#cfd8dc'; ctx.fillRect(44, groundY - 40, 1, 14);
-    ctx.fillStyle = '#1b1024'; ctx.fillRect(42, groundY - 27, 5, 4); ctx.fillRect(40, groundY - 26, 9, 1);
-  });
+  // Requisiten — immer: die beiden Wegweiser (Hoehle links, Sumpf rechts)
+  staticLayer('fork_signs', () => { drawPix('arrow_sign', 96, groundY, 1); drawPix('arrow_sign', 160, groundY, -1); });
   Labels.set('sign_cave', tr('sign.cave'), 97, groundY-15, { align:'center', size:5, color:'#f4e9c9', cls:'flat' });
   Labels.set('sign_swamp', tr('sign.swamp'), 159, groundY-15, { align:'center', size:5, color:'#f4e9c9', cls:'flat' });
-  // Sumpfblasen
-  if (pRand() < 0.06) spawnParticle(176 + pRand() * 70, groundY + 6 + pRand() * 14, { up: 12, g: -10, life: 0.8, color: ['#9fd9a0', '#ffffff'] });
-}); hotspotMarker(50); hotspotMarker(206); drawBruno(); }
+  void photo;
+  hotspotMarker(50); hotspotMarker(206); drawBruno(); }
 
-function drawSpiderScene() { bgOrElse('bg_spider', () => staticLayer('spider_all', () => {
-  // cave interior with depth
-  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0d0a0c'); g.addColorStop(1,'#1e1712');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  // rock ceiling with stalactites
-  ctx.fillStyle='#2a2019'; ctx.fillRect(0,0,W,16);
-  for (let i=0;i<16;i++){ const x=i*17+((rnd(i)*8)|0); const h=6+((rnd(i+7)*14)|0);
-    ctx.fillStyle='#241a14'; ctx.beginPath(); ctx.moveTo(x-3,16); ctx.lineTo(x,16+h); ctx.lineTo(x+3,16); ctx.closePath(); ctx.fill(); }
-  // back wall texture
-  for (let i=0;i<40;i++){ const x=(rnd(i*5)*W)|0, y=20+((rnd(i*11)*70)|0);
-    ctx.fillStyle=rnd(i)>0.5?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.25)'; ctx.fillRect(x,y,3,2); }
-  // hanging webs in the corners
-  ctx.strokeStyle='rgba(207,216,220,0.42)'; ctx.lineWidth=0.5;
-  for (const cx0 of [0,W]) {
-    for (let i=1;i<=5;i++){ ctx.beginPath(); ctx.moveTo(cx0,0); ctx.lineTo(cx0+(cx0?-1:1)*i*13, i*9); ctx.stroke(); }
-    for (let i=1;i<=4;i++){ ctx.beginPath(); ctx.moveTo(cx0+(cx0?-1:1)*i*11,0); ctx.lineTo(cx0+(cx0?-1:1)*4, i*11); ctx.stroke(); }
+function drawSpiderScene() {
+  bgOrElse('bg_spider', () => staticLayer('spider_scenery', () => {
+    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0d0a0c'); g.addColorStop(1,'#1e1712');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#2a2019'; ctx.fillRect(0,0,W,16);
+    for (let i=0;i<16;i++){ const x=i*17+((rnd(i)*8)|0); const h=6+((rnd(i+7)*14)|0);
+      ctx.fillStyle='#241a14'; ctx.beginPath(); ctx.moveTo(x-3,16); ctx.lineTo(x,16+h); ctx.lineTo(x+3,16); ctx.closePath(); ctx.fill(); }
+    for (let i=0;i<40;i++){ const x=(rnd(i*5)*W)|0, y=20+((rnd(i*11)*70)|0);
+      ctx.fillStyle=rnd(i)>0.5?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.25)'; ctx.fillRect(x,y,3,2); }
+    ctx.strokeStyle='rgba(207,216,220,0.42)'; ctx.lineWidth=0.5;
+    for (const cx0 of [0,W]) {
+      for (let i=1;i<=5;i++){ ctx.beginPath(); ctx.moveTo(cx0,0); ctx.lineTo(cx0+(cx0?-1:1)*i*13, i*9); ctx.stroke(); }
+      for (let i=1;i<=4;i++){ ctx.beginPath(); ctx.moveTo(cx0+(cx0?-1:1)*i*11,0); ctx.lineTo(cx0+(cx0?-1:1)*4, i*11); ctx.stroke(); }
+    }
+    ctx.fillStyle='rgba(255,170,60,0.10)';
+    ctx.beginPath(); ctx.ellipse(60,groundY,26,8,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(200,groundY,26,8,0,0,Math.PI*2); ctx.fill();
+    groundStrip('#241a14','#3a2c22',41);
+    drawPix('bones', 96, groundY + 8, 1);
+    drawPix('skull', 198, groundY + 10, -1);
+    drawPix('bones', 226, groundY + 14, 1);
+  }));
+  // Gegner — immer: Spinne am Faden, Leiche bis zur Pruefung
+  const spiderBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('spider') === 0;
+  if (!spiderBusy && state.enemyState === 'alive') {
+    const bob = Math.sin(t*0.06)*1.5;
+    const breathe = 1 + Math.sin(t*0.06) * 0.02;
+    ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(150,0); ctx.lineTo(150,groundY-ASSET_MANIFEST.spider_idle.h+3+bob); ctx.stroke();
+    ctx.save();
+    ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
+    drawSprite('spider_idle', loopFrame('spider_idle'), 150, groundY+bob, 1);
+    ctx.restore();
+  } else if (!spiderBusy && state.enemyState === 'dead') {
+    drawCorpse('spider_defeated', 150, 1);     // liegt da, bis der Statuswert geprueft ist
   }
-  // torch glow pools on the floor
-  ctx.fillStyle='rgba(255,170,60,0.10)';
-  ctx.beginPath(); ctx.ellipse(60,groundY,26,8,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(200,groundY,26,8,0,0,Math.PI*2); ctx.fill();
-  groundStrip('#241a14','#3a2c22',41);
-  // scattered bones + skull
-  drawPix('bones', 96, groundY + 8, 1);
-  drawPix('skull', 198, groundY + 10, -1);
-  drawPix('bones', 226, groundY + 14, 1);
-}));
-// Gegner sichtbar lassen, solange nicht gerade SEIN Hit/Defeated-Schritt
-// laeuft (vorher verschwand die Spinne, waehrend Bruno angriff — sah kaputt aus)
-const spiderBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('spider') === 0;
-if (!spiderBusy && state.enemyState === 'alive') {
-  const bob = Math.sin(t*0.06)*1.5;
-  const breathe = 1 + Math.sin(t*0.06) * 0.02;
-  // web strand holding the spider from the ceiling (ends just inside the sprite)
-  ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(150,0); ctx.lineTo(150,groundY-ASSET_MANIFEST.spider_idle.h+3+bob); ctx.stroke();
-  ctx.save();
-  ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
-  drawSprite('spider_idle', loopFrame('spider_idle'), 150, groundY+bob, 1);
-  ctx.restore();
-} else if (!spiderBusy && state.enemyState === 'dead') {
-  drawCorpse('spider_defeated', 150, 1);     // liegt da, bis der Statuswert geprueft ist
-}
-if (state.enemyState === 'alive') hotspotMarker(150, 72);
-drawBruno(); }
+  if (state.enemyState === 'alive') hotspotMarker(150, 72);
+  drawBruno(); }
 
 /* Leiche: letzter Frame der Defeated-Animation, 180 Grad um die Mitte
    gedreht (Bauch nach oben) und entsaettigt — exakt die Endlage des
@@ -544,97 +553,95 @@ function drawCorpse(key, x, facing) {
   ctx.restore();
 }
 
-function drawCrocScene() { bgOrElse('bg_croc', () => {
-  staticLayer('croc_sky', () => sky('#8fc99b','#d9f0dd'));
-  drawClouds();
-  staticLayer('croc_mid', () => {
-    // hazy jungle wall in the back
-    ctx.fillStyle='#3f6b52'; ctx.fillRect(0,52,W,groundY-52);
-    ctx.fillStyle='#2f5240';
-    for (let i=0;i<22;i++){ const x=i*12+((rnd(i)*6)|0); const h=10+((rnd(i+3)*16)|0);
-      ctx.beginPath(); ctx.moveTo(x-5,60); ctx.lineTo(x,60-h); ctx.lineTo(x+5,60); ctx.closePath(); ctx.fill(); }
-    // vines
-    ctx.strokeStyle='#2f6b35'; ctx.lineWidth=1;
-    for (let i=0;i<7;i++){ const x=14+i*36; ctx.beginPath(); ctx.moveTo(x,52);
-      ctx.quadraticCurveTo(x+5,70,x-2,86); ctx.stroke(); }
+function drawCrocScene() {
+  const photo = bgOrElse('bg_croc', () => {
+    staticLayer('croc_sky', () => sky('#8fc99b','#d9f0dd'));
+    drawClouds();
+    staticLayer('croc_mid', () => {
+      ctx.fillStyle='#3f6b52'; ctx.fillRect(0,52,W,groundY-52);
+      ctx.fillStyle='#2f5240';
+      for (let i=0;i<22;i++){ const x=i*12+((rnd(i)*6)|0); const h=10+((rnd(i+3)*16)|0);
+        ctx.beginPath(); ctx.moveTo(x-5,60); ctx.lineTo(x,60-h); ctx.lineTo(x+5,60); ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle='#2f6b35'; ctx.lineWidth=1;
+      for (let i=0;i<7;i++){ const x=14+i*36; ctx.beginPath(); ctx.moveTo(x,52);
+        ctx.quadraticCurveTo(x+5,70,x-2,86); ctx.stroke(); }
+    });
+    drawWaterStrip(groundY-14,H-groundY+14,PAL.swamp,'#5e9a4b',PAL.swampDark);
+    staticLayer('croc_front', () => {
+      ctx.fillStyle='#4a4030'; ctx.fillRect(0,groundY,W,H-groundY);
+      ctx.fillStyle='#5c5140'; ctx.fillRect(0,groundY,W,3);
+      for (const [lx,ly,ls] of [[36,groundY-9,1],[92,groundY-5,0.8],[214,groundY-11,0.9],[248,groundY-4,0.7]]) {
+        ctx.fillStyle='#3f7a3d'; ctx.beginPath(); ctx.ellipse(lx,ly,7*ls,3*ls,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#4c9a4b'; ctx.beginPath(); ctx.ellipse(lx-1,ly-1,5*ls,2*ls,0,0,Math.PI*2); ctx.fill();
+      }
+      ctx.fillStyle='#6b4226'; ctx.fillRect(22,groundY-46,4,46); ctx.fillRect(232,groundY-38,4,38);
+      ctx.fillStyle=PAL.palm;
+      for (const [px_,py_,sc] of [[24,groundY-46,1],[234,groundY-38,0.8]]) {
+        for (let a=0;a<6;a++){ const ang=-0.35-a*0.42; ctx.save(); ctx.translate(px_,py_); ctx.rotate(ang); ctx.fillRect(0,-1,16*sc,3); ctx.restore(); }
+      }
+      ctx.fillStyle='#3f6b3d';
+      for (let i=0;i<16;i++){ const x=(rnd(i*17)*W)|0; const h=6+((rnd(i*23)*8)|0); ctx.fillRect(x,groundY-h,1,h); }
+    });
+    if (pRand() < 0.05) spawnParticle(20 + pRand() * 216, groundY - 12 + pRand() * 6, { up: 10, g: -8, life: 0.7, color: ['#9fd9a0', '#ffffff'] });
   });
-  drawWaterStrip(groundY-14,H-groundY+14,PAL.swamp,'#5e9a4b',PAL.swampDark);
-  staticLayer('croc_front', () => {
-  // muddy bank
-  ctx.fillStyle='#4a4030'; ctx.fillRect(0,groundY,W,H-groundY);
-  ctx.fillStyle='#5c5140'; ctx.fillRect(0,groundY,W,3);
-  // lily pads
-  for (const [lx,ly,ls] of [[36,groundY-9,1],[92,groundY-5,0.8],[214,groundY-11,0.9],[248,groundY-4,0.7]]) {
-    ctx.fillStyle='#3f7a3d'; ctx.beginPath(); ctx.ellipse(lx,ly,7*ls,3*ls,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#4c9a4b'; ctx.beginPath(); ctx.ellipse(lx-1,ly-1,5*ls,2*ls,0,0,Math.PI*2); ctx.fill();
+  void photo;
+  // Gegner — immer
+  const crocBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('croc') === 0;
+  if (!crocBusy && state.enemyState === 'alive') {
+    const bob = Math.sin(t*0.05)*1.5;
+    const breathe = 1 + Math.sin(t*0.05) * 0.02;
+    ctx.save();
+    ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
+    // Sheet schaut nach links — also Bruno entgegen, nicht spiegeln
+    drawSprite('croc_idle', loopFrame('croc_idle'), 150, groundY+bob, 1);
+    ctx.restore();
+  } else if (!crocBusy && state.enemyState === 'dead') {
+    drawCorpse('croc_defeated', 150, 1);
   }
-  // palms framing the scene
-  ctx.fillStyle='#6b4226'; ctx.fillRect(22,groundY-46,4,46); ctx.fillRect(232,groundY-38,4,38);
-  ctx.fillStyle=PAL.palm;
-  for (const [px_,py_,sc] of [[24,groundY-46,1],[234,groundY-38,0.8]]) {
-    for (let a=0;a<6;a++){ const ang=-0.35-a*0.42; ctx.save(); ctx.translate(px_,py_); ctx.rotate(ang); ctx.fillRect(0,-1,16*sc,3); ctx.restore(); }
-  }
-  // reeds at the waterline
-  ctx.fillStyle='#3f6b3d';
-  for (let i=0;i<16;i++){ const x=(rnd(i*17)*W)|0; const h=6+((rnd(i*23)*8)|0); ctx.fillRect(x,groundY-h,1,h); }
-  });
-});
-if (pRand() < 0.05) spawnParticle(20 + pRand() * 216, groundY - 12 + pRand() * 6, { up: 10, g: -8, life: 0.7, color: ['#9fd9a0', '#ffffff'] });
-const crocBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('croc') === 0;
-if (!crocBusy && state.enemyState === 'alive') {
-  const bob = Math.sin(t*0.05)*1.5;
-  const breathe = 1 + Math.sin(t*0.05) * 0.02;
-  ctx.save();
-  ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
-  // Sheet schaut nach links — also Bruno entgegen, nicht spiegeln
-  drawSprite('croc_idle', loopFrame('croc_idle'), 150, groundY+bob, 1);
-  ctx.restore();
-} else if (!crocBusy && state.enemyState === 'dead') {
-  drawCorpse('croc_defeated', 150, 1);
-}
-if (state.enemyState === 'alive') hotspotMarker(150, 72);
-drawBruno(); }
+  if (state.enemyState === 'alive') hotspotMarker(150, 72);
+  drawBruno(); }
 
-function drawConfirmGateScene() { bgOrElse('bg_confirmgate', () => {
-  staticLayer('confirm_sky', () => sky('#7ea9c9','#c8e2f0'));
-  drawClouds();
-  staticLayer('confirm_front', () => {
-    mountainsBG();
-    groundStrip('#4a4642', '#6b6b60', 17);
-    bush(30, groundY, 0.8); bush(226, groundY, 0.9);
+function drawConfirmGateScene() {
+  const photo = bgOrElse('bg_confirmgate', () => {
+    staticLayer('confirm_sky', () => sky('#7ea9c9','#c8e2f0'));
+    drawClouds();
+    staticLayer('confirm_scenery', () => {
+      mountainsBG();
+      groundStrip('#4a4642', '#6b6b60', 17);
+      bush(30, groundY, 0.8); bush(226, groundY, 0.9);
+    });
   });
-});
-drawGate(128);
-// Laternen auf den Pfeilern + pulsierende Runen auf dem Sturz
-for (const lx of [88, 168]) { drawPix('lantern', lx, groundY - 72, 1); ctx.fillStyle = `rgba(255,210,120,${0.10 + Math.sin(t*0.12 + lx)*0.04})`; ctx.beginPath(); ctx.arc(lx, groundY - 76, 14, 0, Math.PI*2); ctx.fill(); }
-const pulse = 0.55 + Math.sin(t*0.09)*0.35;
-ctx.fillStyle = `rgba(255,214,92,${pulse})`;
-for (let i = 0; i < 5; i++) ctx.fillRect(104 + i * 12, groundY - 90, 4, 3);
-hotspotMarker(128); drawBruno(); }
+  if (photo) staticLayer('confirm_floor', () => stoneFloor(17));
+  // Requisiten — immer: Tor, Laternen, Runen
+  drawGate(128);
+  for (const lx of [88, 168]) { drawPix('lantern', lx, groundY - 72, 1); ctx.fillStyle = `rgba(255,210,120,${0.10 + Math.sin(t*0.12 + lx)*0.04})`; ctx.beginPath(); ctx.arc(lx, groundY - 76, 14, 0, Math.PI*2); ctx.fill(); }
+  const pulse = 0.55 + Math.sin(t*0.09)*0.35;
+  ctx.fillStyle = `rgba(255,214,92,${pulse})`;
+  for (let i = 0; i < 5; i++) ctx.fillRect(104 + i * 12, groundY - 90, 4, 3);
+  hotspotMarker(128); drawBruno(); }
 
-function drawStarsScene() { bgOrElse('bg_stars', () => {
-  staticLayer('stars_sky', () => {
-    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0a1226'); g.addColorStop(1,'#1c2b4a');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+function drawStarsScene() {
+  // Foto: Sternenhimmel mit zwei Saeulen (x~25 / x~228); die vier Sterne (74..188) liegen dazwischen
+  bgOrElse('bg_stars', () => {
+    staticLayer('stars_sky', () => {
+      const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0a1226'); g.addColorStop(1,'#1c2b4a');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    });
+    for (let i=0;i<70;i++){
+      const x=(rnd(i*3.1)*W)|0, y=(rnd(i*7.7)*90)|0;
+      const tw=0.35+Math.abs(Math.sin(t*0.04+i))*0.6;
+      ctx.fillStyle=`rgba(255,255,255,${tw})`; ctx.fillRect(x,y,1,1);
+    }
+    staticLayer('stars_front', () => {
+      ctx.fillStyle='#2a2a33'; ctx.fillRect(0,0,16,H); ctx.fillRect(W-16,0,16,H);
+      ctx.fillStyle='#3a3a45';
+      for (let y=0;y<H;y+=9){ ctx.fillRect(0,y,16,1); ctx.fillRect(W-16,y,16,1); }
+      ctx.fillStyle='#4a4a55'; ctx.fillRect(40,26,8,groundY-26); ctx.fillRect(208,26,8,groundY-26);
+      ctx.fillStyle='#5d5d69'; ctx.fillRect(40,26,3,groundY-26); ctx.fillRect(208,26,3,groundY-26);
+      ctx.fillStyle='#33333d'; ctx.fillRect(37,22,14,5); ctx.fillRect(205,22,14,5);
+      groundStrip('#33333d','#4a4a55',53);
+    });
   });
-  // starfield with twinkle
-  for (let i=0;i<70;i++){
-    const x=(rnd(i*3.1)*W)|0, y=(rnd(i*7.7)*90)|0;
-    const tw=0.35+Math.abs(Math.sin(t*0.04+i))*0.6;
-    ctx.fillStyle=`rgba(255,255,255,${tw})`; ctx.fillRect(x,y,1,1);
-  }
-  staticLayer('stars_front', () => {
-    // stone chamber walls
-    ctx.fillStyle='#2a2a33'; ctx.fillRect(0,0,16,H); ctx.fillRect(W-16,0,16,H);
-    ctx.fillStyle='#3a3a45';
-    for (let y=0;y<H;y+=9){ ctx.fillRect(0,y,16,1); ctx.fillRect(W-16,y,16,1); }
-    // pillars
-    ctx.fillStyle='#4a4a55'; ctx.fillRect(40,26,8,groundY-26); ctx.fillRect(208,26,8,groundY-26);
-    ctx.fillStyle='#5d5d69'; ctx.fillRect(40,26,3,groundY-26); ctx.fillRect(208,26,3,groundY-26);
-    ctx.fillStyle='#33333d'; ctx.fillRect(37,22,14,5); ctx.fillRect(205,22,14,5);
-    groundStrip('#33333d','#4a4a55',53);
-  });
-}); 
 // Raum hellt sich auf, je naeher Bruno der Wahl kommt
 const nearK = 1 - Math.min(1, Math.abs(brunoX - 128) / 100);
 STARS.forEach((s_,i)=>{
@@ -733,27 +740,35 @@ function drawStarFinale(key, x, y) {
   }
 }
 
-function drawEndScene() { bgOrElse('bg_end', () => {
-  staticLayer('end_sky', () => {
-    // warm sunset sky
-    const g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#f6b26b'); g.addColorStop(0.45,'#ffd9a0'); g.addColorStop(1,'#fff0d4');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#ffe066'; ctx.beginPath(); ctx.arc(214,30,15,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(255,224,102,0.25)'; ctx.beginPath(); ctx.arc(214,30,24,0,Math.PI*2); ctx.fill();
+function drawEndScene() {
+  // Foto: alpen.png wie Level 1, aber mit warmem Abendlicht (Verlauf + Sonne) als Sieges-Stimmung
+  const photo = bgOrElse('bg_end', () => {
+    staticLayer('end_sky', () => {
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#f6b26b'); g.addColorStop(0.45,'#ffd9a0'); g.addColorStop(1,'#fff0d4');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#ffe066'; ctx.beginPath(); ctx.arc(214,30,15,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,224,102,0.25)'; ctx.beginPath(); ctx.arc(214,30,24,0,Math.PI*2); ctx.fill();
+    });
+    drawClouds();
+    staticLayer('end_mid', () => mountainsBG());
+    drawWaterStrip(groundY-10,10,'#3d7f96','#6fb0c4','#2c5f74');
+    staticLayer('end_front', () => {
+      groundStrip('#4a7a35','#6fbf4a',61); grassTufts(61);
+      tree(20,groundY,1.0); tree(48,groundY,0.7); tree(216,groundY,0.9); tree(244,groundY,1.1);
+      bush(84,groundY,0.9); bush(170,groundY,0.8);
+      for (let i=0;i<10;i++){ const x=(rnd(i*29)*W)|0;
+        ctx.fillStyle=['#ffd23f','#f2789f','#ffffff'][i%3]; ctx.fillRect(x,groundY-4,1,1); }
+    });
   });
-  drawClouds();
-  staticLayer('end_mid', () => mountainsBG());
-  drawWaterStrip(groundY-10,10,'#3d7f96','#6fb0c4','#2c5f74');
-  staticLayer('end_front', () => {
-    groundStrip('#4a7a35','#6fbf4a',61); grassTufts(61);
-    tree(20,groundY,1.0); tree(48,groundY,0.7); tree(216,groundY,0.9); tree(244,groundY,1.1);
-    bush(84,groundY,0.9); bush(170,groundY,0.8);
-    // flowers
-    for (let i=0;i<10;i++){ const x=(rnd(i*29)*W)|0;
-      ctx.fillStyle=['#ffd23f','#f2789f','#ffffff'][i%3]; ctx.fillRect(x,groundY-4,1,1); }
+  if (photo) staticLayer('end_sunset', () => {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, 'rgba(255,120,40,0.42)'); g.addColorStop(0.5, 'rgba(255,190,80,0.26)'); g.addColorStop(1, 'rgba(255,220,140,0.12)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,224,102,0.30)'; ctx.beginPath(); ctx.arc(214, 30, 24, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.arc(214, 30, 13, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(211, 27, 5, 0, Math.PI*2); ctx.fill();
   });
-});
 // Besen lehnt am Baum, bis Bruno ihn holt
 if (!state.broomTaken) {
   ctx.save(); ctx.translate(58, groundY); ctx.rotate(-1.25); drawPix('broom', 12, 4, 1); ctx.restore();

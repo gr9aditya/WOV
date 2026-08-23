@@ -291,6 +291,24 @@ Felder bekommen.
   Bordwand), Fahrt bis x = W+60 in 2.6 s; falsches Boot faehrt 26 px, bricht
   (0.9 s), Bruno geht daneben unter.
 
+### Zehnter Durchgang (echte Szenenhintergründe)
+
+* `assets/bg/` enthält fünf 256x144-Bilder (alpen, fork, spider, croc, stars),
+  Bodenlinie exakt auf `groundY` (Ausrichtung mit `tools/prepare_bg.py`).
+  Im Manifest hängen `bg_home/river/sword/gate/confirmgate/end` an alpen.png,
+  `bg_fork/spider/croc/stars` an ihrem Bild; der Loader lädt jede Datei nur
+  einmal. `bgOrElse()` blittet 1:1 (Spielkoordinaten), ohne Bild greift der
+  code-gezeichnete Platzhalter.
+* Jede Szenenfunktion hat jetzt drei Ebenen: Kulisse (Foto ODER Platzhalter,
+  nur Landschaft) -> Boden-Overlay (Fluss: Wasser ab groundY + Steg auf
+  groundY; Tore: `stoneFloor()` mit Steinplättchen-Blend in die Graslinie;
+  Ende: Abendlicht-Verlauf + Sonne) -> Requisiten, die IMMER gezeichnet
+  werden (Chalet/Briefkasten, Schilder/Boote/Fischer, Altar/Schwert, Tor,
+  Wegweiser, Gegner/Leichen, Sterne, Besen/Stern, Marker, Bruno).
+* Doppelte Kulisse entfernt: bei geladenem Foto gibt es keine code-gezeichneten
+  Berge, Ufer, Höhle, Palmen, Stalaktiten, Säulen, Sternenhimmel mehr.
+* `bg_inside` bleibt ohne Bild (die Stube ist code-gezeichnet).
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in
