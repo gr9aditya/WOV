@@ -322,6 +322,17 @@ Felder bekommen.
   Titelbildschirm hat bewusst keinen Track (nicht in der Zuordnung).
   Soundeffekte (`Sfx`) bleiben synthetisiert.
 
+### Zwölfter Durchgang (Aufräum-Knopf + Lernkarte)
+
+* Endszene: nach dem Titel-Slam erscheint ein Panel mit dem Knopf
+  „Spuren wegfegen" (`dlg.end.sweepPrompt` / `btn.sweep`). Erst der Klick
+  (oder E) startet Besen holen + Fegen. Das Fegen läuft gemächlicher
+  (`CONFIG.cleanupSceneTime` = 2.4 s pro Szene).
+* Danach Lernkarte `clean` (nur bei eingeschalteten Lernkarten): Browserverlauf,
+  Cache und Cookies nach der Stimmabgabe löschen (`learn.clean.*`, Zeile
+  `map.clean` auch in der Zuordnungstabelle des Abschluss-Panels). Dann das
+  Abschluss-Panel.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

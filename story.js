@@ -306,13 +306,16 @@ function starFinale(i) {
 
 defScene('end', {
   startX: 128, bg: drawEndScene, hotspots: [],
-  // Titel-Slam (1.6 s) -> Bruno holt den Besen -> fliegt alle Level zurueck und
-  // wischt seine Spuren weg -> landet -> Abschluss-Panel mit der Zuordnungstabelle
+  // Titel-Slam (1.6 s) -> Aktionsknopf "Spuren wegfegen" -> Bruno holt den Besen,
+  // fegt gemaechlich alle Level zurueck -> Lernkarte (nur wenn Lernkarten an:
+  // Browserverlauf/Cache nach der Stimmabgabe loeschen) -> Abschluss-Panel
   onEnter: () => playSequence([{ key:'end_title', x:128, dur:1.6 }], () =>
-    playSequence([
-      { key:'bruno_walk', fromX: 128, toX: 72, dur: 0.9 },
-      { key:'bruno_idle', x: 72, facing: -1, dur: 0.5, fx:'reach', onStart: () => { state.broomTaken = true; Sfx.play('pickup'); } }
-    ], () => startCleanup(showEndPanel)))
+    showChoice('dlg.end.sweepPrompt', [
+      { label:'btn.sweep', onClick: () => playSequence([
+          { key:'bruno_walk', fromX: brunoX, toX: 72, dur: Math.max(0.5, Math.abs(brunoX - 72) / 60) },
+          { key:'bruno_idle', x: 72, facing: -1, dur: 0.5, fx:'reach', onStart: () => { state.broomTaken = true; Sfx.play('pickup'); } }
+        ], () => startCleanup(() => learnCard('clean', true, showEndPanel))) }
+    ]))
 });
 
 /* ===================== AUFRAEUMEN =====================
@@ -392,7 +395,7 @@ function drawCleanupBruno() {
   drawSweepingBruno(cleanup.x, cleanup.phase === 'sweep' ? -1 : 1);
 }
 function mappingTableHtml() {
-  const rows = ['codeblatt', 'ship', 'pattern', 'status', 'confirm', 'star'].map(k => {
+  const rows = ['codeblatt', 'ship', 'pattern', 'status', 'confirm', 'star', 'clean'].map(k => {
     const r = tr('map.' + k, { n: CODEBLATT.ship });
     return `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
   }).join('');
@@ -422,7 +425,7 @@ function showEndPanel() {
 // ===================== LERNKARTEN =====================
 /* Nach jedem Erfolg/Fehlschlag eine kurze, optionale Karte: echter Schritt +
    abgewehrte Bedrohung. Abschaltbar (Prefs.data.learn), dann direkt next().  */
-const LEARN_STEP_KEY = { ship:'map.ship', pattern:'map.pattern', status:'map.status', confirm:'map.confirm', star:'map.star' };
+const LEARN_STEP_KEY = { ship:'map.ship', pattern:'map.pattern', status:'map.status', confirm:'map.confirm', star:'map.star', clean:'map.clean' };
 function learnCard(step, ok, next) {
   if (!Prefs.data.learn) { next(); return; }
   const render = () => {

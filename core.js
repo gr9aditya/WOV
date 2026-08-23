@@ -47,7 +47,7 @@ const CONFIG = {
   jumpVel: 165,         // px/s — Absprunggeschwindigkeit (reiner Huepfer, keine Plattformen)
   gravity: 560,         // px/s^2
   footprintMax: 80,     // Fussspuren pro Szene (aelteste fallen raus)
-  cleanupSceneTime: 1.25 // s — Besenflug pro Szene beim Aufraeumen am Ende
+  cleanupSceneTime: 2.4  // s — Fegen pro Szene beim Aufraeumen am Ende (gemaechlich)
 };
 
 // Einstellungen (Ton, Screenshake) ueberleben einen Reload.
