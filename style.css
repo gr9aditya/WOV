@@ -1,8 +1,13 @@
+/* Pixel-Schrift fuer alle Texte und Zahlen (Pixelify Sans, SIL OFL — assets/fonts/).
+   Lokal eingebunden, keine externe Abhaengigkeit; Courier New nur als Notnagel. */
+@font-face { font-family: 'Pixelify Sans'; src: url('assets/fonts/PixelifySans-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Pixelify Sans'; src: url('assets/fonts/PixelifySans-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
 html, body {
   margin: 0; padding: 0; height: 100%;
   background: #0d1b2a;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Courier New', monospace;
+  font-family: 'Pixelify Sans', 'Courier New', monospace;
+  -webkit-font-smoothing: none;
   overflow: hidden;
 }
 #wrap { position: relative; --gs: 4; }
@@ -100,27 +105,29 @@ canvas {
 @keyframes cardup { from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1} }
 @keyframes starspin { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25) rotate(12deg)} }
 
-#codeblattBtn {
-  position: absolute; top: 10px; right: 10px;
-  padding-left: 62px !important; min-height: 40px;
-  background-repeat: no-repeat; background-position: 8px center; background-size: 48px 32px;
-  image-rendering: pixelated;
-  font-family: inherit; font-size: 17px; letter-spacing: 1px;
-  background: #f4e9c9; color: #3a2418; border: 2px solid #1b1024;
-  padding: 6px 8px; cursor: pointer; text-transform: uppercase;
-  box-shadow: 2px 2px 0 #1b1024;
-}
-#codeblattBtn:active { transform: translate(2px,2px); box-shadow: none; }
-
+/* Obere Knoepfe: Codeblatt (rechts) und Leiste (links) teilen sich EINE Form —
+   gleiche Hoehe, Innenabstand, Schrift, Kontur, Hover und gedrueckter Zustand. */
 #topbar { position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; }
-#topbar button {
-  font-family: inherit; font-size: 17px; letter-spacing: 1px;
-  background: #f4e9c9; color: #3a2418; border: 2px solid #1b1024;
+#codeblattBtn { position: absolute; top: 10px; right: 10px; }
+#topbar button, #codeblattBtn {
+  font-family: inherit; font-weight: 700; font-size: 17px; letter-spacing: 1px; line-height: 1.2;
+  background: #f4e9c9; color: #3a2418; border: 2px solid #1b1024; border-radius: 0;
   padding: 6px 8px; cursor: pointer; text-transform: uppercase;
   box-shadow: 2px 2px 0 #1b1024;
 }
+#topbar button:hover, #codeblattBtn:hover { background: #fff6d6; }
 #topbar button.off { background: #8a8a8a; color: #2a2a2a; }
-#topbar button:active { transform: translate(2px,2px); box-shadow: none; }
+#topbar button:active, #codeblattBtn:active { transform: translate(2px,2px); box-shadow: none; }
+
+/* Fortschritt: Etappe n von 8 — gleiche Pixelkontur und Palette wie die Knoepfe */
+#progress {
+  position: absolute; top: 52px; left: 10px; display: flex; align-items: center; gap: 8px;
+  font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: 1px; text-transform: uppercase;
+  color: #f4e9c9; text-shadow: 2px 2px 0 #1b1024; pointer-events: none; z-index: 2;
+}
+#progress .pbar { display: flex; gap: 2px; padding: 3px; background: #f4e9c9; border: 2px solid #1b1024; box-shadow: 2px 2px 0 #1b1024; }
+#progress .pbar i { display: block; width: 14px; height: 10px; background: #c9bb9c; }
+#progress .pbar i.on { background: #3f5e42; box-shadow: inset 0 -3px 0 #2e4730; }
 
 #hotspotPrompt {
   position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
@@ -141,10 +148,24 @@ canvas {
   pointer-events: auto;
   width: 94%; margin-bottom: 10px; box-sizing: border-box;
   max-height: calc(100% - 20px); overflow-y: auto;
-  background: #f4e9c9; color: #2a1810;
-  border: 3px solid #1b1024; box-shadow: 4px 4px 0 #1b1024;
-  padding: 14px 18px; font-size: 20px; line-height: 1.45;
+  position: relative; border-radius: 0;
+  /* RPG-Textfenster: satter marineblauer Rahmen, helle cremefarbene Flaeche,
+     blaugrauer Streifen am unteren Rand — alles harte Pixelkanten, keine Verlaeufe */
+  background: #f7efd9; color: #2a1810;
+  border: 4px solid #0e1a30;
+  box-shadow: inset 0 -6px 0 #7d93a8, 0 0 0 2px #3b5270, 4px 4px 0 2px #0e1a30;
+  padding: 14px 18px 22px; font-size: 20px; line-height: 1.45;
   animation: panelup 0.22s cubic-bezier(0.2,1.2,0.4,1);
+}
+/* Eckakzente: kleine Diamant-Pixel (Plus-Form, blaugrau wie die Doppelkante) in den vier
+   Innenecken — 8 einfarbige Flaechen, kein Verlauf, keine Rundung */
+.panel::before {
+  content: ''; position: absolute; inset: 2px; pointer-events: none;
+  background:
+    linear-gradient(#3b5270, #3b5270) left 0 top 2px / 6px 2px no-repeat,  linear-gradient(#3b5270, #3b5270) left 2px top 0 / 2px 6px no-repeat,
+    linear-gradient(#3b5270, #3b5270) right 0 top 2px / 6px 2px no-repeat, linear-gradient(#3b5270, #3b5270) right 2px top 0 / 2px 6px no-repeat,
+    linear-gradient(#3b5270, #3b5270) left 0 bottom 8px / 6px 2px no-repeat,  linear-gradient(#3b5270, #3b5270) left 2px bottom 6px / 2px 6px no-repeat,
+    linear-gradient(#3b5270, #3b5270) right 0 bottom 8px / 6px 2px no-repeat, linear-gradient(#3b5270, #3b5270) right 2px bottom 6px / 2px 6px no-repeat;
 }
 @keyframes panelup { from{transform:translateY(10px); opacity:0} to{transform:none; opacity:1} }
 .panel .line { min-height: 1.45em; }
@@ -270,3 +291,9 @@ details p { margin: 6px 0 0; font-size: 0.9em; }
 #touchbar button:nth-child(2) { margin-right: auto; margin-left: 8px; }
 @media (pointer: coarse) { #touchbar { display: flex; } }
 #hotspotPrompt:focus-visible, #touchbar button:focus-visible, #pauseMenu .btn:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+
+/* kleine Fenster: Fortschritt kompakter, bleibt unter der Leiste */
+@media (max-width: 760px) {
+  #progress { top: 48px; font-size: 13px; }
+  #progress .pbar i { width: 10px; height: 8px; }
+}

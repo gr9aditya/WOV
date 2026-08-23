@@ -70,13 +70,13 @@ style.css       panels, buttons, code sheet, menu, label layer
 core.js         canvas, CONFIG, prefs, palette, sound, music, particles
 i18n.js         DE/FR/IT strings and tr()
 labels.js       DOM text layer positioned in game coordinates
-pixart.js       hand-drawn sprites and the procedural gate
+pixart.js       hand-drawn sprites, the code symbols, the canvas pixel font
 engine.js       asset manifest and loader, animation, state, sequences, input
 draw.js         drawing helpers, Bruno, the sword, static layers
 scenes.js       scene backdrops, enemies, the star finale, the rune tower
 story.js        the code sheet, scenes, dialogue, menu, learn cards, update()
 main.js         frame loop, fitCanvas, boot, touch controls
-assets/         sprite sheets, backgrounds, audio
+assets/         sprite sheets, backgrounds, audio, fonts (Pixelify Sans, OFL)
 tools/          asset preparation scripts (Pillow only)
 HANDOFF.md      the running development log, in German
 ```

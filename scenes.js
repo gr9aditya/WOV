@@ -277,7 +277,7 @@ function drawHomeScene() {
     });
   });
   // Requisiten — immer: Chalet mit Rauch, Briefkasten (Hotspot x=122)
-  staticLayer('home_props', () => { chalet(groundY); drawPix('mailbox', 122, groundY, 1); });
+  staticLayer('home_props', () => { if (!drawSprite('chalet', 0, 53, groundY, 1)) chalet(groundY); drawPix('mailbox', 122, groundY, 1); });
   chaletSmoke(groundY);
   hotspotMarker(122); drawBruno(); }
 
@@ -317,46 +317,58 @@ function drawRiverScene() {
   drawSprite('fisher_evil', loopFrame('fisher_evil'), 220, groundY, -1);
   hotspotMarker(70); hotspotMarker(190); drawBruno(); }
 
-/* Ruderboot (assets/props/boat.png, 56x26): naher Bordrand (Zeile 8) liegt auf
-   y, der Rumpf haengt im Wasser. bobOn: sanftes Auf/Ab plus minimale Neigung
-   um die Rumpfmitte, pro Boot versetzt (phase).                            */
-function drawBoatHull(x, y, phase, bobOn) {
-  const g = y === undefined ? groundY : y;
-  const bob = bobOn ? Math.sin(t * 0.045 + phase) * 1.2 : 0;
-  const tilt = bobOn ? Math.sin(t * 0.03 + phase * 1.7) * 0.03 : 0;
-  const cy = g + 8 + bob;
-  ctx.save();
-  ctx.translate(x, cy); ctx.rotate(tilt); ctx.translate(-x, -cy);
-  if (!drawSprite('boat', 0, x, g + 18 + bob, 1)) drawPix('boat', x, g + 8 + bob, 1);
-  ctx.restore();
+/* Ruderboot (assets/props/boat.png 72x29, tools/make_boat.py). Der nahe Bordrand
+   (Sprite-Zeile BOAT_RIM) liegt BOAT_SINK px unter der Stegkante, der Rumpf
+   steht im Wasser: ab BOAT_WATER px unter dem Rand wird ein halbdurchsichtiges
+   Wasserband ueber den Rumpf gelegt (Wasserlinie im unteren/mittleren Rumpf).
+   Bob ist ganzzahlig und ohne Neigung -> keine Sub-Pixel, kein Flackern.
+   passenger(x, y): zeichnet Bruno ZWISCHEN hinterem Bootsteil und naher
+   Bordwand (boat_front) — Fuesse im Rumpf, feste Position relativ zum Boot. */
+const BOAT_RIM = 9, BOAT_SINK = 4, BOAT_WATER = 11;
+function drawBoatHull(x, y, phase, bobOn, passenger) {
+  const g = Math.round(y === undefined ? groundY : y);
+  const spec = ASSET_MANIFEST.boat;
+  const bob = bobOn ? Math.round(Math.sin(t * 0.045 + phase) * 1.5) : 0;
+  const bx = Math.round(x), rim = g + BOAT_SINK + bob;
+  const bottom = rim + (spec.h - BOAT_RIM);
+  if (!drawSprite('boat', 0, bx, bottom, 1)) { drawPix('boat', bx, rim + 8, 1); if (passenger) passenger(bx - 6, rim + 3); return; }
+  if (passenger) { passenger(bx - 6, rim + 3); drawSprite('boat_front', 0, bx, bottom, 1); }
+  const wl = rim + BOAT_WATER, left = bx - Math.ceil(spec.w / 2);
+  ctx.fillStyle = hexA(PAL.river, 0.62); ctx.fillRect(left, wl, spec.w, bottom - wl + 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  for (let i = 0; i < spec.w; i += 3) if (Math.sin((bx + i + t * 0.4) * 0.35) > 0) ctx.fillRect(left + i, wl, 2, 1);
 }
-/* Holzschild am Pfosten auf dem Steg: Rahmen, Brett mit Maserung, Nummer als DOM-Label */
+/* Holzschild am Pfosten auf dem Steg: Pixelkontur, Rahmen, Brett mit Maserung
+   und Schattenkante; die Nummer steht als Pixelschrift IM Schild (gleiche Ebene). */
 function drawBoatSign(x, label) {
   const g = groundY;
-  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 1, g - 27, 3, 22);            // Pfosten
+  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 2, g - 28, 5, 23);            // Pfosten mit Kontur
+  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 1, g - 27, 3, 22);
   ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, g - 27, 1, 22);
-  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 17, g - 42, 34, 16);          // Kontur
-  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 16, g - 41, 32, 14);          // Rahmen
-  ctx.fillStyle = '#8a5a2e'; ctx.fillRect(x - 14, g - 39, 28, 10);          // Brett
-  ctx.fillStyle = '#a8743c'; ctx.fillRect(x - 14, g - 39, 28, 1);
-  ctx.fillStyle = '#6b4a2a';                                                // Maserung
-  for (let i = 0; i < 5; i++) { const gx = x - 13 + ((rnd(i * 7 + x) * 22) | 0), len = 3 + ((rnd(i + x) * 5) | 0); ctx.fillRect(gx, g - 37 + i * 2, len, 1); }
-  ctx.fillStyle = '#2a1810'; ctx.fillRect(x - 15, g - 34, 1, 1); ctx.fillRect(x + 14, g - 34, 1, 1);   // Naegel
-  Labels.set('boat' + label, label, x, g - 39, { align:'center', size:8, color:'#f4e9c9' });
+  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 20, g - 44, 40, 18);          // Kontur
+  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - 19, g - 43, 38, 16);          // Rahmen
+  ctx.fillStyle = '#6b4a2a'; ctx.fillRect(x - 19, g - 28, 38, 1);           // Rahmen-Schattenkante
+  ctx.fillStyle = '#8a5a2e'; ctx.fillRect(x - 17, g - 41, 34, 12);          // Brett
+  ctx.fillStyle = '#a8743c'; ctx.fillRect(x - 17, g - 41, 34, 1); ctx.fillRect(x - 17, g - 41, 1, 12);   // Licht oben/links
+  ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 17, g - 30, 34, 1); ctx.fillRect(x + 16, g - 41, 1, 12);   // Schatten unten/rechts
+  ctx.fillStyle = '#7a4e28';                                                // Maserung
+  for (let i = 0; i < 5; i++) { const gx = x - 16 + ((rnd(i * 7 + x) * 28) | 0), len = 3 + ((rnd(i + x) * 5) | 0); ctx.fillRect(gx, g - 39 + i * 2, len, 1); }
+  ctx.fillStyle = '#2a1810'; ctx.fillRect(x - 18, g - 35, 1, 1); ctx.fillRect(x + 17, g - 35, 1, 1);   // Naegel
+  drawPixText(label, x, g - 40, '#f4e9c9', 2, 'center', '#2a1810');
 }
 /* Zerbrechendes Boot: das Sprite zerfaellt in drei Teile (Heck, Mitte, Bug),
    die auseinanderdriften, kippen und unter die Wasserlinie sinken.        */
 function drawBoatWreck(x, y, p) {
   const img = Assets.imgs.boat, spec = ASSET_MANIFEST.boat;
   if (!img) { drawPix('boat_wreck', x, y + 8 + p * 5, 1); return; }
-  const left = x - spec.w / 2, top = y + 18 - spec.h;
+  const left = x - spec.w / 2, top = y + BOAT_SINK + (spec.h - BOAT_RIM) - spec.h;
   const pieces = [
-    { sx: 0,  w: 20, dx: -p * 14, dy: p * 10, rot: -0.6 * p },
-    { sx: 20, w: 16, dx: 0,       dy: p * 14, rot: 0.12 * p },
-    { sx: 36, w: 20, dx: p * 14,  dy: p * 9,  rot: 0.55 * p }
+    { sx: 0,  w: 26, dx: -p * 14, dy: p * 10, rot: -0.6 * p },
+    { sx: 26, w: 20, dx: 0,       dy: p * 14, rot: 0.12 * p },
+    { sx: 46, w: 26, dx: p * 14,  dy: p * 9,  rot: 0.55 * p }
   ];
   ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, W, y + 12); ctx.clip();                 // unter der Wasserlinie verschwinden
+  ctx.beginPath(); ctx.rect(0, 0, W, y + BOAT_SINK + BOAT_WATER); ctx.clip();   // unter der Wasserlinie verschwinden
   ctx.globalAlpha = 1 - p * 0.35;
   for (const pc of pieces) {
     const cx = left + pc.sx + pc.w / 2 + pc.dx, cy = top + spec.h / 2 + pc.dy;
@@ -437,19 +449,103 @@ function drawGateScene() {
       tree(12, groundY, 0.8); tree(246, groundY, 0.7);
     });
   });
-  if (photo) staticLayer('gate_floor', () => stoneFloor(11));   // Stein statt Wiese unter dem Tor
-  drawGate(128);
+  void photo;
+  // Waldboden + warmes Licht ueber Foto/Platzhalter: Moos, Laub, Farn, Pilze statt
+  // Steinplatten; Lichtbahnen durchs Blattwerk; gruener Schimmer (Kontrast zum kalten Turm)
+  staticLayer('gate_forest', () => {
+    ctx.fillStyle = 'rgba(70,130,40,0.16)'; ctx.fillRect(0, 0, W, H);
+    forestFloor(11);
+    ctx.fillStyle = 'rgba(255,240,170,0.10)';
+    for (const [x0, w] of [[30, 14], [84, 10], [150, 12], [204, 16]]) { ctx.beginPath(); ctx.moveTo(x0 + 30, 0); ctx.lineTo(x0 + 30 + w, 0); ctx.lineTo(x0 + w, groundY); ctx.lineTo(x0, groundY); ctx.closePath(); ctx.fill(); }
+  });
+  drawTreeGate();
   hotspotMarker(128); drawBruno(); }
 
-/* Tor-Zustand aus Sequenz/State: gate_open-Schritt dreht die Fluegel auf,
-   danach bleiben sie offen (state.gateOpen), gate_reject pulst rot.    */
-function drawGate(x) {
+/* ===================== Baumtor (Musterwahl) =====================
+   Zwei alte Baeume, oben ineinandergewachsen (assets/props/treegate.png,
+   tools/make_treegate.py), Durchgang x 108..148. Was sich bewegt, zeichnet der
+   Code: Ranken im Durchgang (ziehen sich bei richtigem Muster zurueck, ziehen
+   sich bei falschem rot zusammen), die vier in die Rinde geschnitzten Muster
+   (das gewaehlte leuchtet gruen bzw. rot) und das geschnitzte Dreieck ueber
+   dem Durchgang (Initialisierungscode). Die Logik (pickPattern) ist unveraendert;
+   ohne Sprite faellt die Szene auf das alte Steintor zurueck.               */
+const TREEGATE_X = 128, PASSAGE = { x0: 108, x1: 148, top: 56 };
+const CARVED_COLS = [85, 101, 157, 173];        // Welt-x (Mitte) der vier Musterspalten in der Rinde
+function forestFloor(seed) {
+  ctx.fillStyle = '#3b2a1c'; ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.fillStyle = '#4a3524'; ctx.fillRect(0, groundY, W, 2);
+  for (let i = 0; i < 40; i++) {                                            // Moosflecken
+    const x = (rnd(i * 3.7 + seed) * W) | 0, y = groundY + 2 + ((rnd(i * 5.1 + seed) * (H - groundY - 4)) | 0), w = 4 + ((rnd(i + seed) * 10) | 0);
+    ctx.fillStyle = rnd(i * 2.3) > 0.5 ? '#4f7a2e' : '#5f8f38'; ctx.fillRect(x, y, w, 2);
+    ctx.fillStyle = '#70a040'; ctx.fillRect(x + 1, y, Math.max(1, w - 3), 1);
+  }
+  for (let i = 0; i < 30; i++) {                                            // Laub
+    const x = (rnd(i * 7.3 + seed) * W) | 0, y = groundY + 1 + ((rnd(i * 9.7 + seed) * (H - groundY - 2)) | 0);
+    ctx.fillStyle = ['#b8642a', '#d08a3a', '#8a4a22', '#c9a04a'][i % 4]; ctx.fillRect(x, y, 2, 1);
+  }
+  for (const [fx, fy] of [[18, groundY + 4], [62, groundY + 7], [196, groundY + 5], [238, groundY + 8]]) {   // Farne
+    for (const ang of [-1.1, -0.55, 0, 0.55, 1.1]) {
+      for (let k = 1; k < 8; k++) { ctx.fillStyle = k > 5 ? '#6aae52' : '#3f7a2e'; ctx.fillRect(Math.round(fx + Math.sin(ang) * k * 1.2), Math.round(fy - Math.cos(ang) * k), 1, 1); }
+    }
+  }
+  for (const [mx, my, c] of [[44, groundY + 10, '#d64545'], [210, groundY + 11, '#e0b23f'], [222, groundY + 13, '#d64545']]) {   // Pilze
+    ctx.fillStyle = '#f4e9c9'; ctx.fillRect(mx, my - 2, 1, 3);
+    ctx.fillStyle = '#1b1024'; ctx.fillRect(mx - 2, my - 3, 5, 1);
+    ctx.fillStyle = c; ctx.fillRect(mx - 2, my - 5, 5, 2); ctx.fillRect(mx - 1, my - 6, 3, 1);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(mx - 1, my - 5, 1, 1); ctx.fillRect(mx + 1, my - 4, 1, 1);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(56, groundY, 144, 3);   // Wurzelschatten unter dem Tor
+}
+function drawTreeGate() {
   const st = sequence && sequence.steps[sequence.i];
   let openK = state.gateOpen ? 1 : 0, red = 0;
   if (st && st.key === 'gate_open') openK = Math.max(openK, Math.min(1, seqProgress(st) * 1.15));
   if (st && st.key === 'gate_reject') red = 0.5 + Math.sin(seqProgress(st) * 24) * 0.4;
-  gateDraw(x, groundY, openK, red);
-  gateTorches(x, groundY);
+  const opening = st && st.key === 'gate_open';
+  if (!drawSprite('treegate', 0, TREEGATE_X, groundY + 4, 1)) { gateDraw(TREEGATE_X, groundY, openK, red); gateTorches(TREEGATE_X, groundY); return; }
+  // geschnitzte Muster: Spalte i = PATTERNS[i], drei Symbole untereinander (Kerbe + Schnitzung).
+  // Die Schnitzungen sind statisch -> einmal in eine Ebene gezeichnet; nur das Leuchten ist live.
+  staticLayer('gate_carved', () => PATTERNS.forEach((pat, i) => pat.forEach((id, j) => {
+    drawPixTint('sym_' + id, CARVED_COLS[i] + 1, 73 + j * 14, '#1b1024', 0.85);   // Kerbe (Schatten)
+    drawPixTint('sym_' + id, CARVED_COLS[i], 72 + j * 14, '#d9b27a', 0.55);       // freigelegtes helles Holz
+  })));
+  const picked = state.pickedPattern;
+  PATTERNS.forEach((pat, i) => {
+    const x = CARVED_COLS[i];
+    const lit = picked === i && (opening || state.gateOpen || red > 0);
+    if (!lit) return;
+    pat.forEach((id, j) => {
+      const by = 72 + j * 14;
+      if (red > 0) drawPixTint('sym_' + id, x, by, '#ff4a4a', 0.5 + red * 0.5);
+      else { ctx.globalAlpha = state.gateOpen ? 0.8 + Math.sin(t * 0.1) * 0.2 : Math.min(1, openK * 1.5); drawPix('sym_' + id, x, by, 1); ctx.globalAlpha = 1; }
+    });
+    if (lit && red === 0) runeHalo(x, 80, '#8fd968', Math.min(1, openK * 1.2), 12);
+  });
+  // geschnitztes Dreieck (Initialisierungscode) auf der Rindentafel ueber dem Durchgang
+  drawSymbol('triangle', TREEGATE_X, 45, 6, 'carved', red > 0 ? '#5a1a1a' : '#2a1810');
+  drawVines(openK, red);
+}
+/* Ranken im Durchgang: sieben Straenge, abwechselnd von links/rechts, leicht
+   schwingend (zeitbasiert). openK zieht sie zur eigenen Seite zurueck, bei
+   falschem Muster (red) werden sie dunkelrot, flach und zittern (ziehen sich
+   zusammen).                                                                */
+function drawVines(openK, red) {
+  const span = PASSAGE.x1 - PASSAGE.x0;
+  const len = Math.round(span * (1 - openK));
+  if (len <= 0) return;
+  const tight = red > 0 ? 1 - red * 0.5 : 1;
+  for (let i = 0; i < 7; i++) {
+    const fromLeft = i % 2 === 0;
+    const y0 = PASSAGE.top + 5 + i * 7;
+    const col = red > 0 ? '#6b2a1a' : (i % 3 === 0 ? '#2f6b35' : '#3f7f3a');
+    const lf = red > 0 ? '#a83a2a' : '#8fd968';
+    for (let s = 0; s < len; s++) {
+      const x = fromLeft ? PASSAGE.x0 + s : PASSAGE.x1 - 1 - s;
+      const y = Math.round(y0 + Math.sin(s * 0.3 + i * 1.3 + t * 0.02) * 3 * tight + (red > 0 ? Math.sin(t * 0.6 + s) * 0.8 : 0));
+      ctx.fillStyle = col; ctx.fillRect(x, y, 1, 2);
+      if (s % 9 === 4) { ctx.fillStyle = lf; ctx.fillRect(x, y - 2, 2, 2); }
+    }
+  }
 }
 
 function drawForkScene() {
@@ -491,8 +587,9 @@ function drawForkScene() {
   });
   // Requisiten — immer: die beiden Wegweiser (Hoehle links, Sumpf rechts)
   staticLayer('fork_signs', () => { drawPix('arrow_sign', 96, groundY, 1); drawPix('arrow_sign', 160, groundY, -1); });
-  Labels.set('sign_cave', tr('sign.cave'), 97, groundY-15, { align:'center', size:5, color:'#f4e9c9', cls:'flat' });
-  Labels.set('sign_swamp', tr('sign.swamp'), 159, groundY-15, { align:'center', size:5, color:'#f4e9c9', cls:'flat' });
+  // Beschriftung als Pixelschrift im Brett (gleiche Ebene wie das Schild, Bruno laeuft davor)
+  drawPixText(tr('sign.cave'), 98, groundY - 15, '#f4e9c9', 1, 'center', '#2a1810');
+  drawPixText(tr('sign.swamp'), 158, groundY - 15, '#f4e9c9', 1, 'center', '#2a1810');
   void photo;
   hotspotMarker(50); hotspotMarker(206); drawBruno(); }
 
@@ -524,7 +621,7 @@ function drawSpiderScene() {
     const bob = Math.sin(t*0.06)*1.5;
     const breathe = 1 + Math.sin(t*0.06) * 0.02;
     ctx.strokeStyle='rgba(207,216,220,0.5)'; ctx.lineWidth=0.5;
-    ctx.beginPath(); ctx.moveTo(150,0); ctx.lineTo(150,groundY-ASSET_MANIFEST.spider_idle.h+3+bob); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(150,0); ctx.lineTo(150,groundY-Math.round(ASSET_MANIFEST.spider_idle.h*CHAR_SCALE)+3+bob); ctx.stroke();
     ctx.save();
     ctx.translate(150, groundY + bob); ctx.scale(breathe, 1); ctx.translate(-150, -(groundY + bob));
     drawSprite('spider_idle', loopFrame('spider_idle'), 150, groundY+bob, 1);
@@ -567,7 +664,7 @@ function drawCorpse(key, x, facing) {
   const spec = ASSET_MANIFEST[key];
   if (!spec) return;
   const last = spec.frames - 1;
-  const cy = groundY - spec.h / 2;
+  const cy = groundY - spec.h * spriteScale(key) / 2;
   ctx.save();
   ctx.translate(x, cy); ctx.rotate(Math.PI * facing); ctx.translate(-x, -cy);
   if (!drawSprite(key, last, x, groundY, facing)) {
@@ -663,31 +760,51 @@ function runeHalo(x, y, color, alpha, rad) {
   ctx.fillStyle = hexA(color, alpha * 0.28); ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = hexA(color, alpha * 0.18); ctx.beginPath(); ctx.arc(x, y, rad * 1.8, 0, Math.PI * 2); ctx.fill();
 }
-// Tor im Bogen: zwei Fluegel mit Eisenbaendern, drehen ueber openK nach innen auf
-function towerDoor(openK, red) {
-  const x0 = ARCH.x0, x1 = ARCH.x1, top = ARCH.top, base = groundY;
-  ctx.save();
-  ctx.beginPath(); ctx.rect(x0, top + ARCH.r, x1 - x0, base - top - ARCH.r); ctx.arc(ARCH.cx, top + ARCH.r, ARCH.r, Math.PI, 0); ctx.clip();
-  // Innenraum: dunkel, bei offenem Tor violett durchleuchtet
-  ctx.fillStyle = '#0c0a12'; ctx.fillRect(x0, top, x1 - x0, base - top);
-  if (openK > 0) {
-    const g = ctx.createLinearGradient(0, top, 0, base);
-    g.addColorStop(0, `rgba(140,90,255,${0.12 + 0.35 * openK})`); g.addColorStop(1, `rgba(120,220,255,${0.05 + 0.3 * openK})`);
-    ctx.fillStyle = g; ctx.fillRect(x0, top, x1 - x0, base - top);
-    ctx.fillStyle = `rgba(200,170,255,${0.5 * openK})`; ctx.fillRect(ARCH.cx - 1, top + 6, 2, base - top - 6);   // Lichtspalt
+/* ===================== Galaxy-Portal im Turmbogen =====================
+   Statt des Holztors: ein animiertes Pixel-Portal im Rundbogen. Pro Frame
+   werden die 28x44 Bogen-Pixel direkt berechnet (drei Spiralarme, dunkles
+   tiefes Zentrum, heller Rand, Magenta-Funken) und auf eine feste Palette
+   (Dunkelblau, Blau, Violett, Tuerkis, Cyan, Magenta, Weiss) gerastert —
+   keine Verlaeufe, keine Unschaerfe. Zeit = t (dt-basiert, bildratenunabhaengig),
+   alles ueber sin/cos -> nahtloser Loop. openK hellt auf und beschleunigt
+   (richtiger Code), red faerbt rot (falscher Code). Acht Partikel laufen auf
+   ganzzahligen Pixeln am Rand entlang.                                       */
+const PORTAL_W = ARCH.x1 - ARCH.x0, PORTAL_H = groundY - ARCH.top;
+const portalCanvas = document.createElement('canvas'); portalCanvas.width = PORTAL_W; portalCanvas.height = PORTAL_H;
+const portalCtx = portalCanvas.getContext('2d');
+const portalImg = portalCtx.createImageData(PORTAL_W, PORTAL_H);
+const PORTAL_PAL = [[10, 12, 42], [24, 40, 110], [78, 52, 160], [36, 140, 170], [90, 220, 225], [205, 70, 200], [235, 250, 255]];
+function drawPortal(openK, red) {
+  const d = portalImg.data, cx = PORTAL_W / 2, cy = PORTAL_H / 2;
+  const time = t * (0.012 + 0.03 * openK);
+  const bright = 0.45 + 0.55 * openK;
+  for (let y = 0; y < PORTAL_H; y++) for (let x = 0; x < PORTAL_W; x++) {
+    const i = (y * PORTAL_W + x) * 4;
+    const dx = (x + 0.5 - cx) / cx, dy = (y + 0.5 - cy) / cy;
+    const r = Math.sqrt(dx * dx + dy * dy);
+    if (r > 1) { d[i + 3] = 0; continue; }
+    const a = Math.atan2(dy, dx);
+    const arm = Math.sin(a * 3 + r * 10 - time * 6);               // drei Spiralarme, drehen langsam
+    const v = (arm * 0.5 + 0.5) * (0.25 + 0.75 * r);               // Mitte dunkel, aussen heller
+    let idx = v < 0.22 ? 0 : v < 0.45 ? 1 : v < 0.62 ? 2 : v < 0.8 ? 3 : 4;
+    if (arm > 0.93 && r > 0.35 && r < 0.85) idx = 5;               // Magenta-Funken in den Armen
+    if (r > 0.9) idx = 4;
+    if (r > 0.96) idx = 6;                                         // heller Rand
+    if (r < 0.12) idx = 0;                                         // tiefes Zentrum
+    let R = PORTAL_PAL[idx][0] * bright, G = PORTAL_PAL[idx][1] * bright, B = PORTAL_PAL[idx][2] * bright;
+    if (red > 0) { R += (200 - R) * red; G *= 1 - red * 0.7; B *= 1 - red * 0.7; }
+    d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = 255;
   }
-  const half = (x1 - x0) / 2, lw = Math.max(0, Math.round(half * (1 - openK)));
-  const leaf = (lx, dir) => {
-    if (lw <= 0) return;
-    ctx.fillStyle = '#1b1024'; ctx.fillRect(lx, top, lw, base - top);
-    ctx.fillStyle = '#3a2416'; ctx.fillRect(lx + (dir > 0 ? 1 : 0), top + 1, Math.max(0, lw - 1), base - top - 1);
-    ctx.fillStyle = '#2a1810'; for (let px = 3; px < lw - 1; px += 4) ctx.fillRect(lx + px, top, 1, base - top);
-    ctx.fillStyle = '#2f2f36'; for (const py of [top + 14, top + 26, top + 38]) { ctx.fillRect(lx, py, lw, 3); ctx.fillStyle = '#55555e'; ctx.fillRect(lx, py, lw, 1); ctx.fillStyle = '#2f2f36'; }
-    ctx.fillStyle = '#8a8a96'; for (const py of [top + 15, top + 27, top + 39]) for (let px = 2; px < lw - 1; px += 5) ctx.fillRect(lx + px, py, 1, 1);
-    if (lw > 5) { ctx.fillStyle = '#6a6a78'; const rx = dir > 0 ? lx + lw - 4 : lx + 2; ctx.fillRect(rx, base - 22, 2, 3); }
-  };
-  leaf(x0, 1); leaf(x1 - lw, -1);
-  if (red > 0) { ctx.fillStyle = `rgba(255,60,60,${0.35 * red})`; ctx.fillRect(x0, top, x1 - x0, base - top); }
+  portalCtx.putImageData(portalImg, 0, 0);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ARCH.x0, ARCH.top + ARCH.r, PORTAL_W, groundY - ARCH.top - ARCH.r); ctx.arc(ARCH.cx, ARCH.top + ARCH.r, ARCH.r, Math.PI, 0); ctx.clip();
+  ctx.fillStyle = '#07081a'; ctx.fillRect(ARCH.x0, ARCH.top, PORTAL_W, PORTAL_H);
+  ctx.drawImage(portalCanvas, ARCH.x0, ARCH.top);
+  for (let k = 0; k < 8; k++) {
+    const ang = time * 2.2 + k * Math.PI / 4, rr = 0.93 + Math.sin(time * 5 + k) * 0.04;
+    const px = Math.round(ARCH.cx + Math.cos(ang) * cx * rr), py = Math.round(ARCH.top + cy + Math.sin(ang) * cy * rr);
+    ctx.fillStyle = k % 3 === 0 ? '#ff8ae8' : '#cffcff'; ctx.fillRect(px, py, 1, 1);
+  }
   ctx.restore();
 }
 // Runenkonsole (Steintafel) links vom Eingang — leuchtet auf, wenn Bruno davorsteht
@@ -768,8 +885,8 @@ function drawConfirmGateScene() {
   for (const [wx, wy, ph] of [[TOWER_OX + 58, TOWER_OY + 18, 0], [TOWER_OX + 98, TOWER_OY + 54, 2]]) {
     ctx.fillStyle = `rgba(170,140,240,${0.25 + Math.sin(t * 0.07 + ph) * 0.08 + Math.sin(t * 0.23 + ph) * 0.05})`; ctx.fillRect(wx - 1, wy, 4, 11);
   }
-  // Tor + Tafel + Konsole
-  towerDoor(openK, red);
+  // Portal + Tafel + Konsole
+  drawPortal(openK, red);
   towerPlaque(red);
   const near = Math.abs(brunoX - TOWER_X) < CONFIG.interactRange && ui.mode === null;
   towerConsole(near || opening || ui.mode === 'panel', red);
@@ -825,7 +942,7 @@ STARS.forEach((s_,i)=>{
     ctx.beginPath(); ctx.ellipse(s_.x,cy,9+r*3,3.5+r*1.2, t*s_.speed*(r%2?-1.3:1)+i, 0, Math.PI*2); ctx.stroke();
   }
   ctx.globalAlpha=1;
-  drawStarShape(s_.x, cy, s_.c, pulse);
+  drawPix('star', s_.x, Math.round(cy) + 6, 1, { ch:'s', color:s_.c });
 });
 if (nearK > 0) { ctx.fillStyle = `rgba(255,236,180,${0.16*nearK})`; ctx.fillRect(0,0,W,H); }
 // der gewonnene Stern schwebt ueber Bruno (nach der Sequenz, vor dem Abgang)
@@ -868,7 +985,7 @@ function drawWonStar(x, y, k, color) {
   ctx.fillStyle = hexA(c, 0.18 + 0.2*k); ctx.beginPath(); ctx.arc(x,y,12+k*8,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle=c; ctx.lineWidth=1;
   for (let r=0;r<Math.max(1, st.rings);r++){ ctx.beginPath(); ctx.ellipse(x,y,8+r*3,3+r,t*0.04*(r%2?-1:1),0,Math.PI*2); ctx.stroke(); }
-  drawStarShape(x, y, c, 1 + Math.sin(t*0.1)*0.08);
+  drawPix('star', Math.round(x), Math.round(y) + 6, 1, { ch:'s', color:c });
 }
 /* Finale-Schritte (Keys star_flare / star_swoop / star_burst, keine Sheets) */
 function drawStarFinale(key, x, y) {

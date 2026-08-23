@@ -167,6 +167,7 @@ defScene('gate', {
   ]
 });
 function pickPattern(p) {
+  state.pickedPattern = PATTERNS.indexOf(p);      // nur fuer die Darstellung am Baumtor (leuchtende Schnitzung)
   if (p.join('-') === CODEBLATT.pattern.join('-')) {
     playSequence([{ key:'gate_open', x:128, bottomY:groundY, dur:0.9, sfx:'gate', shake:1.5, shakeDur:0.5 }],
       () => { state.gateOpen = true; showDialogue('dlg.gate.ok', { icon:'pattern', onFinal: () => learnCard('pattern', true, () => doorWalk(() => goToScene('fork'))) }); });
@@ -606,6 +607,7 @@ function quitToTitle() {
   state.scene = 'home'; brunoX = scenes.home.startX; brunoY = 0; brunoVY = 0; brunoFacing = 1;
   Music.setScene('title');
   ui.mode = 'modal';
+  updateProgress();
   const startScreen = document.getElementById('startScreen');
   startScreen.classList.remove('hidden');
   const sb = document.getElementById('startBtn'); if (sb) sb.focus();
@@ -745,6 +747,22 @@ window.addEventListener('keydown', e => {
 
 // ===================== SCENE MGMT =====================
 // Szene -> Levelnummer + Namensschluessel fuer das Schild im Level-Wipe
+/* Fortschrittsanzeige (UI-Overlay, oben links unter der Leiste): Etappe n von 8,
+   aktualisiert bei jedem Szenenwechsel (applyScene). Reiner Fortschritt — keine
+   Codes, keine Loesungen. Auf dem Titelbild ausgeblendet.                    */
+const PROGRESS_MAX = 8;
+function updateProgress() {
+  const el = document.getElementById('progress'); if (!el) return;
+  const lv = LEVELS[state.scene];
+  const show = !!lv && ui.mode !== 'modal';
+  el.classList.toggle('hidden', !show);
+  if (!show) return;
+  const n = Math.min(PROGRESS_MAX, lv.n);
+  const label = tr('ui.progress', { n, m: PROGRESS_MAX });
+  el.querySelector('.plabel').textContent = label;
+  el.setAttribute('aria-label', label);
+  el.querySelector('.pbar').innerHTML = Array.from({ length: PROGRESS_MAX }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+}
 const LEVELS = {
   inside:      { n:1, name:'level.inside' },
   home:        { n:1, name:'level.home' },
@@ -784,6 +802,7 @@ function applyScene(id) {
   if (transition.applied) return;
   transition.applied = true;
   state.scene = id; brunoX = scenes[id].startX; brunoFacing = 1; brunoVel = 0;
+  updateProgress();
   state.enemyState = 'alive'; state.starTaken = -1;
   state.boatGone = null; state.brunoHidden = false; state.gateOpen = false; state.broomTaken = false;
   brunoY = 0; brunoVY = 0; hopTimer = 1.8;

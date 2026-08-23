@@ -375,6 +375,44 @@ Felder bekommen.
   Zuordnungstabelle am Ende tragen das Symbol des Schritts.
 * Logik, Reihenfolge und Codewerte unverändert.
 
+### Fünfzehnter Durchgang (Game-Update „ohne Schloss": Massstab, Fluss, Baumtor, Portal, UI)
+
+* **Figuren-Massstab**: `CONFIG.charScale` = 1.2 (Bruno +20 %). `spriteScale(key)` in
+  engine.js leitet Schwert, Hut, Spinne und Krokodil vom selben Wert ab; `drawSprite`
+  skaliert und setzt die Fusszeile exakt auf `bottomY` (auf Geraetepixel gerundet,
+  `padBottom` herausgerechnet — Idle und alle Walk-Frames enden bei 0 px über dem Boden).
+  Hand-Anker (`HAND`), Hut-Offsets, Schwert-Pivot und Hieb-Bogen skalieren mit.
+  Bruno ist sichtbar 33 px hoch, die Fischer 32 px.
+* **Fell**: `tools/darken_bruno.py` macht nur die neun Fellfarben ~7 % dunkler/wärmer
+  (Bauch, Augen, Kontur unverändert); Original liegt als `assets/bruno/idle_original.png`.
+* **Fluss**: Boot neu (`tools/make_boat.py`, 72x29 statt 56x26, +29 % breit, +12 % hoch),
+  liegt `BOAT_SINK` = 4 px tiefer, Wasserlinie als halbdurchsichtiges Band ab
+  `BOAT_WATER`; zweite Ebene `boat_front.png` (nahe Bordwand) liegt bei der Fahrt VOR
+  Bruno (Passagier an fester lokaler Position, `drawBoatHull(..., passenger)`). Bob
+  ganzzahlig, keine Rotation mehr -> kein Flackern. Wasser: drei Sinus-Wellenbänder pro
+  Spalte, zeitbasiert, nahtlos (`drawWaterStrip`). Bootsnummern und die Wegweiser
+  „Höhle/Sumpf" sind jetzt Pixelschrift IM Canvas (`PIXFONT`, `drawPixText` in
+  pixart.js) — keine DOM-Labels mehr, Bruno läuft vor Schild und Schrift.
+* **Baumtor** (Musterwahl): `assets/props/treegate.png` (`tools/make_treegate.py`),
+  Durchgang x 108..148. Ranken (`drawVines`), die vier Muster als Schnitzungen in der
+  Rinde (`CARVED_COLS`, gewähltes leuchtet grün / rot, `state.pickedPattern`), Dreieck
+  auf der Rindentafel, Waldboden mit Moos/Laub/Farn/Pilzen (`forestFloor`), Lichtbahnen
+  und grüner Schimmer. Ohne Sprite fällt die Szene auf das alte Steintor zurück.
+* **Galaxy-Portal**: im Turmbogen ersetzt `drawPortal` das Holztor (`towerDoor` entfernt):
+  28x44 Pixel pro Frame berechnet, 7-Farben-Palette, Spiralarme, Randpartikel; openK =
+  heller/schneller, red = rot. Turm, Runen, Konsole, Tafel unverändert.
+* **Sterne**: ein fünfzackiges Sprite `PIX.star` (13x12) für Sternenraum, Auswahlpanel
+  und Codeblatt, Farbe per Tint (Cache-Key pro Farbe — vorher kollidierten die Tints).
+  Keine Ringe im Panel. Finale-Effekte nutzen weiter den Pfad (gleiche Silhouette).
+* **Chalet**: `assets/props/chalet.png` (`tools/make_chalet.py`, 112x92) an derselben
+  Stelle (unten-mittig 53, groundY); `chalet()` bleibt Fallback.
+* **UI**: Schrift Pixelify Sans (OFL, `assets/fonts/`) für alles; Codeblatt-Knopf heisst
+  nur noch „Codeblatt" (ohne Icon, gleiche Form wie die Leiste); Fortschritt
+  „Etappe n von 8" unter der Leiste (`updateProgress`, `PROGRESS_MAX`); Textbox (`.panel`)
+  mit marineblauem Rahmen, Doppelkante, blaugrauem Fussstreifen und Eckpixeln.
+* Nicht geändert: Logik, Reihenfolge, Codewerte, Audio, Texte (ausser Knopf/Fortschritt).
+  Level 5 (Weggabelung): nur das Wegweiser-Schild (Abschnitt 10.3 des Auftrags).
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

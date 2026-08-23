@@ -18,7 +18,7 @@ const I18N = {
     'ui.why':'Warum ist das sicher?', 'ui.mapping':'So bildet das Spiel das E-Voting ab',
     // ---- Topbar / Titel / Menue ----
     'top.sound':'Ton', 'top.fx':'FX', 'top.music':'Musik', 'top.learn':'Lernkarten', 'top.on':'AN', 'top.off':'AUS',
-    'top.codeblatt':'Codeblatt öffnen', 'top.menu':'Menü', 'top.sound.title':'Ton an/aus', 'top.fx.title':'Screenshake und Blitze an/aus',
+    'top.codeblatt':'Codeblatt', 'ui.progress':'Etappe {n} von {m}', 'top.menu':'Menü', 'top.sound.title':'Ton an/aus', 'top.fx.title':'Screenshake und Blitze an/aus',
     'top.music.title':'Musik an/aus', 'top.learn.title':'Lernkarten nach jedem Schritt an/aus', 'top.menu.title':'Menü (Esc)',
     'title.h1':'BRUNOS<br>CODE-ABENTEUER', 'title.sub':'Eine Reise durch die Sicherheitsschritte<br>des Schweizer E-Votings',
     'title.start':'Abenteuer starten', 'title.hint':'A / D laufen · Leertaste springen · E benutzen · Enter weiter · G Codeblatt · Esc Menü',
@@ -132,7 +132,7 @@ const I18N = {
     'ui.learnTitle':'À retenir', 'ui.learnOk':'C’est clair', 'ui.correct':'Correct', 'ui.wrong':'Faux',
     'ui.why':'Pourquoi est-ce sûr ?', 'ui.mapping':'Ce que le jeu représente dans le vote électronique',
     'top.sound':'Son', 'top.fx':'FX', 'top.music':'Musique', 'top.learn':'Fiches', 'top.on':'ON', 'top.off':'OFF',
-    'top.codeblatt':'Ouvrir la feuille de codes', 'top.menu':'Menu', 'top.sound.title':'Son on/off', 'top.fx.title':'Secousses et flashs on/off',
+    'top.codeblatt':'Feuille de codes', 'ui.progress':'Étape {n} sur {m}', 'top.menu':'Menu', 'top.sound.title':'Son on/off', 'top.fx.title':'Secousses et flashs on/off',
     'top.music.title':'Musique on/off', 'top.learn.title':'Fiches d’apprentissage après chaque étape', 'top.menu.title':'Menu (Échap)',
     'title.h1':'L’AVENTURE<br>DES CODES DE BRUNO', 'title.sub':'Un voyage à travers les étapes de sécurité<br>du vote électronique suisse',
     'title.start':'Commencer l’aventure', 'title.hint':'A / D marcher · Espace sauter · E utiliser · Entrée suite · G feuille de codes · Échap menu',
@@ -239,7 +239,7 @@ const I18N = {
     'ui.learnTitle':'Da ricordare', 'ui.learnOk':'Chiaro', 'ui.correct':'Corretto', 'ui.wrong':'Sbagliato',
     'ui.why':'Perché è sicuro?', 'ui.mapping':'Cosa rappresenta il gioco nel voto elettronico',
     'top.sound':'Suono', 'top.fx':'FX', 'top.music':'Musica', 'top.learn':'Schede', 'top.on':'ON', 'top.off':'OFF',
-    'top.codeblatt':'Apri il foglio dei codici', 'top.menu':'Menu', 'top.sound.title':'Suono on/off', 'top.fx.title':'Scosse e lampi on/off',
+    'top.codeblatt':'Foglio codici', 'ui.progress':'Tappa {n} di {m}', 'top.menu':'Menu', 'top.sound.title':'Suono on/off', 'top.fx.title':'Scosse e lampi on/off',
     'top.music.title':'Musica on/off', 'top.learn.title':'Schede didattiche dopo ogni passo', 'top.menu.title':'Menu (Esc)',
     'title.h1':'L’AVVENTURA<br>DEI CODICI DI BRUNO', 'title.sub':'Un viaggio attraverso i passi di sicurezza<br>del voto elettronico svizzero',
     'title.start':'Inizia l’avventura', 'title.hint':'A / D cammina · Spazio salta · E usa · Invio avanti · G foglio dei codici · Esc menu',
@@ -371,6 +371,7 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = tr(el.getAttribute('data-i18n-title')); el.setAttribute('aria-label', el.title); });
   document.querySelectorAll('[data-lang]').forEach(el => { el.classList.toggle('off', el.getAttribute('data-lang') !== lang); el.setAttribute('aria-pressed', el.getAttribute('data-lang') === lang ? 'true' : 'false'); });
   if (typeof syncTopbar === 'function') syncTopbar();
+  if (typeof updateProgress === 'function') updateProgress();
   if (typeof ui !== 'undefined' && typeof ui.rerender === 'function') ui.rerender();
   if (typeof cardState !== 'undefined' && cardState && typeof codeblattOpen === 'function' && codeblattOpen()) renderCodeblattCard(cardState.side, cardState.isFirstTime);
 }

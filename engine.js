@@ -34,8 +34,14 @@ const ASSET_MANIFEST = {
   hat:             { src:'assets/props/hat.png', frames:1, fps:1, w:16, h:9, loop:false },
   // Runenturm (tools/make_tower.py): Mauerwerk mit Rundbogen, 160x126, unten-mittig auf groundY+2
   tower:           { src:'assets/props/tower.png', frames:1, fps:1, w:160, h:126, loop:false },
-  // Ruderboot in Seitenansicht (tools/make_boat.py): naher Bordrand = Zeile 8, Kiel = Zeile 25
-  boat:            { src:'assets/props/boat.png', frames:1, fps:1, w:56, h:26, loop:false },
+  // Ruderboot in Seitenansicht (tools/make_boat.py, 72x29): naher Bordrand = Zeile 9 (BOAT_RIM), Kiel = Zeile 28.
+  // boat_front = nur die nahe Bordwand ab Zeile 9 — liegt waehrend der Fahrt VOR Bruno (Beine im Boot).
+  boat:            { src:'assets/props/boat.png',       frames:1, fps:1, w:72, h:29, loop:false },
+  boat_front:      { src:'assets/props/boat_front.png', frames:1, fps:1, w:72, h:29, loop:false },
+  // Baumtor der Musterwahl (tools/make_treegate.py): zwei Baeume mit Astbogen, 208x124, unten-mittig auf (128, groundY+4)
+  treegate:        { src:'assets/props/treegate.png', frames:1, fps:1, w:208, h:124, loop:false },
+  // Brunos Chalet (tools/make_chalet.py): 112x92, unten-mittig auf (53, groundY) — gleiche Lage wie die Code-Zeichnung
+  chalet:          { src:'assets/props/chalet.png', frames:1, fps:1, w:112, h:92, loop:false },
   // --- Enemies ---
   // Spinne + Krokodil: echte Idle-Loops (assets/<tier>/idle.gif -> idle.png).
   // hit/defeated nutzen dasselbe Sheet — schneller bzw. langsamer abgespielt,
@@ -163,20 +169,37 @@ function loopFrame(key) {
   return Math.floor((t / 60) * spec.fps) % spec.frames;
 }
 
-// draw a loaded sprite frame centered at (cx, groundLevel bottom)
+/* Einheitlicher Figuren-Massstab (CONFIG.charScale, Auftrag: Bruno +20 %).
+   Schwert, Hut, Spinne und Krokodil leiten sich von demselben Wert ab —
+   nirgends ein eigener, hart codierter Faktor. Kulissen/Requisiten bleiben 1. */
+const CHAR_SCALE = CONFIG.charScale;
+function spriteScale(key) {
+  if (!key) return 1;
+  if (key.indexOf('bruno') === 0 || key.indexOf('spider') === 0 || key.indexOf('croc') === 0 || key === 'sword' || key === 'hat') return CHAR_SCALE;
+  return 1;
+}
+/* Sprite zeichnen, Pivot = unterer Mittelpunkt der SICHTBAREN Figur: leere
+   Zeilen unter den Fuessen (padBottom, beim Laden gemessen) werden
+   herausgerechnet, die Fuesse liegen exakt auf bottomY. Skaliert mit
+   spriteScale(key), Ausgabe immer auf ganzzahligen Spiel-Pixeln (Nearest).   */
 function drawSprite(key, frame, cx, bottomY, facing) {
   const spec = ASSET_MANIFEST[key];
   const img = Assets.imgs[key];
   if (!img) return false;
   const sx = ((spec.start || 0) + frame) * spec.w;
-  const top = Math.round(bottomY - spec.h + (spec.padBottom || 0));   // Fuesse auf bottomY
+  const sc = spriteScale(key);
+  const dw = Math.round(spec.w * sc), dh = Math.round(spec.h * sc);
+  // Fusszeile des skalierten Bildes exakt auf bottomY: auf Geraetepixel (1/RES) gerundet,
+  // so dass die unterste sichtbare Zeile nie ueber der Bodenlinie endet (keine Luecke)
+  const feet = dh - (spec.padBottom || 0) * dh / spec.h;
+  const top = Math.ceil((bottomY - feet) * RES - 1e-6) / RES;
   ctx.save();
   if (facing < 0) {
-    ctx.translate(Math.round(cx + spec.w/2), top);
+    ctx.translate(Math.round(cx + dw / 2), top);
     ctx.scale(-1, 1);
-    ctx.drawImage(img, sx, 0, spec.w, spec.h, 0, 0, spec.w, spec.h);
+    ctx.drawImage(img, sx, 0, spec.w, spec.h, 0, 0, dw, dh);
   } else {
-    ctx.drawImage(img, sx, 0, spec.w, spec.h, Math.round(cx - spec.w/2), top, spec.w, spec.h);
+    ctx.drawImage(img, sx, 0, spec.w, spec.h, Math.round(cx - dw / 2), top, dw, dh);
   }
   ctx.restore();
   return true;
@@ -202,14 +225,17 @@ function drawSpriteTinted(key, frame, cx, bottomY, facing, color, alpha) {
   tintCtx.fillRect(0, 0, spec.w, spec.h);
   tintCtx.globalAlpha = 1;
   tintCtx.globalCompositeOperation = 'source-over';
-  const top = Math.round(bottomY - spec.h + (spec.padBottom || 0));
+  const sc = spriteScale(key);
+  const dw = Math.round(spec.w * sc), dh = Math.round(spec.h * sc);
+  const feet = dh - (spec.padBottom || 0) * dh / spec.h;
+  const top = Math.ceil((bottomY - feet) * RES - 1e-6) / RES;
   ctx.save();
   if (facing < 0) {
-    ctx.translate(Math.round(cx + spec.w / 2), top);
+    ctx.translate(Math.round(cx + dw / 2), top);
     ctx.scale(-1, 1);
-    ctx.drawImage(tintCanvas, 0, 0, spec.w, spec.h, 0, 0, spec.w, spec.h);
+    ctx.drawImage(tintCanvas, 0, 0, spec.w, spec.h, 0, 0, dw, dh);
   } else {
-    ctx.drawImage(tintCanvas, 0, 0, spec.w, spec.h, Math.round(cx - spec.w / 2), top, spec.w, spec.h);
+    ctx.drawImage(tintCanvas, 0, 0, spec.w, spec.h, Math.round(cx - dw / 2), top, dw, dh);
   }
   ctx.restore();
   return true;
@@ -294,7 +320,7 @@ function drawSequence() {
     } else if (fx === 'defeat') {
       // Hochschnellen und auf den Ruecken kippen (180 Grad um die Mitte) —
       // Endlage ist exakt die Leichenpose aus drawCorpse()
-      const cy = by - (spec.h || 16) / 2;
+      const cy = by - (spec.h || 16) * spriteScale(step.key) / 2;
       ctx.translate(sx, cy - Math.sin(p * Math.PI) * 8);
       ctx.rotate(p * Math.PI * facing);
       ctx.translate(-sx, -cy);
@@ -372,7 +398,7 @@ function drawSequence() {
   }
   if (fx === 'raise') {
     // Funkeln um das erhobene Schwert
-    const hx = sx + facing * 14, hy = by - 16 - 20;
+    const hx = sx + facing * Math.round(14 * CHAR_SCALE), hy = by - Math.round(36 * CHAR_SCALE);
     ctx.fillStyle = `rgba(255,240,180,${0.35 * Math.sin(p * Math.PI)})`;
     ctx.beginPath(); ctx.ellipse(hx, hy, 10, 14, 0, 0, Math.PI * 2); ctx.fill();
   }

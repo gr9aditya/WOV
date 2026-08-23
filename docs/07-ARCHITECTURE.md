@@ -53,12 +53,22 @@ mirrors these deliberately.
 
 ### `labels.js` — text that stays sharp
 
-Canvas text at this scale looks soft, so there is none. Level signs, boat numbers,
-signposts and the closing title are DOM elements positioned in game coordinates
-over the canvas, including wipe clipping and shake.
+Ordinary canvas text at this scale looks soft, so there are two answers, and which
+one a piece of text uses depends on whether anything should be able to walk in
+front of it.
 
-*Consequence worth knowing:* text does not appear in canvas captures. The
-explainer GIF's captions were composited separately for this reason.
+**DOM, through `Labels`** — the level wipe sign, the guardians' meter reading and
+the closing title. Positioned in game coordinates over the canvas, carrying wipe
+clipping, fade and shake with them.
+
+**Drawn into the canvas** — since v17, the boat numbers and the cave/swamp
+signposts use `PIXFONT` and `drawPixText()` from `pixart.js`. They moved because
+they belong to the world rather than the interface: Bruno now walks *in front of*
+the sign and its lettering, which a DOM layer sitting above the canvas can never
+do.
+
+*Consequence worth knowing:* the DOM half does not appear in canvas captures. The
+explainer GIF's captions were composited separately for that reason.
 
 ### `pixart.js` — sprites drawn in code
 
@@ -159,7 +169,18 @@ run the game.
   sheet: extracts frames, removes background, restores native pixel resolution,
   hardens the alpha edge, and prints the `ASSET_MANIFEST` line to paste.
 - `prepare_bg.py` — aligns a background so its ground line lands on `groundY`.
-- `make_boat.py`, `make_tower.py` — generate those two props.
+- `make_boat.py`, `make_tower.py`, `make_chalet.py`, `make_treegate.py`,
+  `make_symbols.py` — generate those props.
+- `darken_bruno.py` — shifts only Bruno's nine fur colours ~7% darker and warmer,
+  leaving belly, eyes and outline alone. The original sheet is kept beside it as
+  `assets/bruno/idle_original.png`.
+
+## Third-party assets
+
+`assets/fonts/` holds **Pixelify Sans** (Regular and Bold), used for the whole
+interface. It is licensed under the SIL Open Font License 1.1; the full licence
+and copyright are in `assets/fonts/OFL-PixelifySans.txt`, which must stay
+alongside the font files for redistribution to be valid.
 
 ## Known rough edges
 

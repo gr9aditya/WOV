@@ -91,8 +91,6 @@ Assets.load(() => {
   startScreen.classList.remove('hidden');
   applyLanguage(); syncTopbar();
   Music.setScene('title');             // Titelmusik, sobald die erste Geste die Audio-Freigabe bringt
-  const cbBtn = document.getElementById('codeblattBtn');
-  cbBtn.style.backgroundImage = `url(${pixIcon('scroll', 2)})`;   // Schriftrolle als Icon
   const startBtn = document.getElementById('startBtn');
   startBtn.onclick = () => {
     Sfx.resume();

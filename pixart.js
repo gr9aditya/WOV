@@ -119,23 +119,23 @@ const PIX = {
       '.kkkk..............kkkk.' ] },
 
   // Wegweiser-Brett mit Pfeil nach links (fuer rechts: facing -1)
-  arrow_sign: { pal: { k:'#1b1024', w:'#8a5a2e', W:'#a8743c', d:'#5a3a22', p:'#4a2f18' },
+  arrow_sign: { pal: { k:'#1b1024', w:'#8a5a2e', W:'#a8743c', d:'#5a3a22', D:'#3a2418', p:'#4a2f18', P:'#6b4a2a', g:'#7a4e28', n:'#2a1810' },
     rows: [
       '....kkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
       '...kWWWWWWWWWWWWWWWWWWWWWWWWWWWWk',
-      '..kWwwwwwwwwwwwwwwwwwwwwwwwwwwwwk',
+      '..kWwwwwwgggwwwwwwwwwwwwgggwwwwwk',
       '.kWwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk',
       'kWwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk',
       '.kdwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk',
-      '..kdwwwwwwwwwwwwwwwwwwwwwwwwwwwwk',
-      '...kddddddddddddddddddddddddddddk',
+      '..kdwwwggwwwwwwwwwwwwwggwwwwwwwwk',
+      '...kdddddddddddddddddddddddddddDk',
       '....kkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-      '...............kpk...............',
-      '...............kpk...............',
-      '...............kpk...............',
-      '...............kpk...............',
-      '...............kpk...............',
-      '...............kpk...............',
+      '..............kPpnk..............',
+      '..............kPpnk..............',
+      '..............kPpnk..............',
+      '..............kPpnk..............',
+      '..............kPpnk..............',
+      '..............kPpnk..............',
       '..............kkkkk..............' ] },
 
   // Besen (quer, Borsten links — facing -1 spiegelt); Bruno sitzt auf dem Stiel (Zeile 3)
@@ -183,19 +183,22 @@ const PIX = {
       '..kkk..' ] },
 
   // Stern-Symbol (Codeblatt / Sternwahl), Farbe ueber pal.s
+  // Fuenfzackiger Stern 13x12 (Spitze oben, symmetrisch, dunkle Kontur, zwei Glanzpixel).
+  // EIN Sprite fuer Sternenraum, Auswahlpanel und Codeblatt — Farbe per Tint (ch 's').
   star: { pal: { k:'#1b1024', s:'#ffd23f', S:'#ffffff' },
     rows: [
-      '.....k.....',
-      '....ksk....',
-      '....ksk....',
-      '...kssSk...',
-      'kkkksSSskkk',
-      'kssssSsssSk',
-      '.ksssssssk.',
-      '..kssssk...',
-      '..ksskssk..',
-      '.kssk.kssk.',
-      'kkk....kkk.' ] },
+      '......k......',
+      '.....kSk.....',
+      '.....ksk.....',
+      '....ksssk....',
+      'kkkkkssskkkkk',
+      'ksSsssssssssk',
+      '.ksssssssssk.',
+      '..ksssssssk..',
+      '.ksssssssssk.',
+      '.ksssk.ksssk.',
+      'kssk.....kssk',
+      'kkk.......kkk' ] },
 
   // Symbole 12x12 fuer Muster/Codeblatt (Palette pro Symbol)
   sym_moon: { pal: { k:'#1b1024', m:'#ffe066', M:'#fff6c0' },
@@ -214,7 +217,7 @@ const PIX = {
 
 const pixCache = {};
 function pixSprite(name, tint) {
-  const key = tint ? name + '|' + tint : name;
+  const key = tint ? name + '|' + tint.ch + '|' + tint.color : name;   // pro Farbe ein Puffer
   let e = pixCache[key];
   if (e) return e;
   const def = PIX[name];
@@ -232,6 +235,21 @@ function pixSprite(name, tint) {
   }
   e = pixCache[key] = { c, w, h };
   return e;
+}
+/* Sprite einfarbig eingefaerbt zeichnen (Schnitzung/Kerbe in Rinde, roter Schein) */
+function drawPixTint(name, cxPos, bottomY, color, alpha) {
+  const s = pixSprite(name);
+  if (!s) return false;
+  const w = s.c.width, h = s.c.height;
+  if (tintCanvas.width < w || tintCanvas.height < h) { tintCanvas.width = Math.max(tintCanvas.width, w); tintCanvas.height = Math.max(tintCanvas.height, h); }
+  tintCtx.clearRect(0, 0, w, h);
+  tintCtx.drawImage(s.c, 0, 0);
+  tintCtx.globalCompositeOperation = 'source-in'; tintCtx.fillStyle = color; tintCtx.fillRect(0, 0, w, h);
+  tintCtx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+  ctx.drawImage(tintCanvas, 0, 0, w, h, Math.round(cxPos - s.w / 2), Math.round(bottomY - s.h), s.w, s.h);
+  ctx.globalAlpha = 1;
+  return true;
 }
 /* unten-mittig verankert; facing -1 spiegelt */
 function drawPix(name, cxPos, bottomY, facing, tint) {
@@ -258,6 +276,50 @@ function pixIcon(name, scale, tint) {
   cx.imageSmoothingEnabled = false;
   cx.drawImage(s.c, 0, 0, s.c.width, s.c.height, 0, 0, c.width, c.height);
   return (pixIconCache[key] = c.toDataURL('image/png'));
+}
+/* ---------- Pixel-Schrift 3x5 fuer Schilder (Bootsnummern, Wegweiser) ----------
+   Text wird direkt in den Canvas gezeichnet und gehoert damit zur Ebene des
+   Schilds — Bruno laeuft VOR Schild und Schrift vorbei (keine DOM-Labels mehr,
+   die ueber allem liegen). Grossbuchstaben, Umlaute, Ziffern, Bindestrich.  */
+const PIXFONT = {
+  A:['.#.','#.#','###','#.#','#.#'], B:['##.','#.#','##.','#.#','##.'], C:['.##','#..','#..','#..','.##'],
+  D:['##.','#.#','#.#','#.#','##.'], E:['###','#..','##.','#..','###'], F:['###','#..','##.','#..','#..'],
+  G:['.##','#..','#.#','#.#','.##'], H:['#.#','#.#','###','#.#','#.#'], I:['###','.#.','.#.','.#.','###'],
+  J:['..#','..#','..#','#.#','.#.'], K:['#.#','#.#','##.','#.#','#.#'], L:['#..','#..','#..','#..','###'],
+  M:['#.#','###','###','#.#','#.#'], N:['##.','#.#','#.#','#.#','#.#'], O:['.#.','#.#','#.#','#.#','.#.'],
+  P:['##.','#.#','##.','#..','#..'], Q:['.#.','#.#','#.#','.#.','..#'], R:['##.','#.#','##.','#.#','#.#'],
+  S:['.##','#..','.#.','..#','##.'], T:['###','.#.','.#.','.#.','.#.'], U:['#.#','#.#','#.#','#.#','###'],
+  V:['#.#','#.#','#.#','#.#','.#.'], W:['#.#','#.#','###','###','#.#'], X:['#.#','#.#','.#.','#.#','#.#'],
+  Y:['#.#','#.#','.#.','.#.','.#.'], Z:['###','..#','.#.','#..','###'],
+  '0':['###','#.#','#.#','#.#','###'], '1':['.#.','##.','.#.','.#.','###'], '2':['##.','..#','.#.','#..','###'],
+  '3':['###','..#','.##','..#','###'], '4':['#.#','#.#','###','..#','..#'], '5':['###','#..','##.','..#','##.'],
+  '6':['.##','#..','###','#.#','###'], '7':['###','..#','.#.','.#.','.#.'], '8':['###','#.#','###','#.#','###'],
+  '9':['###','#.#','###','..#','##.'],
+  'Ä':['#.#','.#.','#.#','###','#.#'], 'Ö':['#.#','.#.','#.#','#.#','.#.'], 'Ü':['#.#','...','#.#','#.#','###'],
+  'É':['.#.','###','#..','##.','###'], 'È':['.#.','###','#..','##.','###'], 'À':['.#.','.#.','#.#','###','#.#'],
+  '-':['...','...','###','...','...'], '.':['...','...','...','...','.#.'], ' ':['...','...','...','...','...']
+};
+/* drawPixText(text, x, top, color, scale, align, shadow)
+   align 'left' | 'center' | 'right'; scale = ganze Zahl (1 = 3x5 px); shadow = Farbe
+   fuer einen 1-px-Versatz unten rechts (Lesbarkeit auf Holz). Alles ganzzahlig. */
+function pixTextWidth(text, scale) { const z = scale || 1; return text.length * 4 * z - z; }
+function drawPixText(text, x, top, color, scale, align, shadow) {
+  const z = Math.max(1, Math.round(scale || 1));
+  const s = String(text).toUpperCase();
+  const w = pixTextWidth(s, z);
+  let x0 = Math.round(x) - (align === 'center' ? Math.round(w / 2) : align === 'right' ? w : 0);
+  const y0 = Math.round(top);
+  const passes = shadow ? [[shadow, z], [color, 0]] : [[color, 0]];
+  for (const [col, off] of passes) {
+    ctx.fillStyle = col;
+    let gx = x0 + off;
+    for (const ch of s) {
+      const g = PIXFONT[ch] || PIXFONT['.'];
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (g[r][c] === '#') ctx.fillRect(gx + c * z, y0 + off + r * z, z, z);
+      gx += 4 * z;
+    }
+  }
+  return w;
 }
 /* <img> fuer ein Symbol, z.B. in Auswahl-Buttons und auf dem Codeblatt */
 function symImg(id, cls) {

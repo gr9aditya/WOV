@@ -123,21 +123,34 @@ function groundStrip(color=PAL.ground, grassColor=PAL.grass, seed=3) {
   }
 }
 
+/* Wasser: Grundflaeche + drei Wellenbaender, die als Sinuslinien pro Spalte
+   laufen (t ist dt-basiert -> zeitbasiert, bildratenunabhaengig; Sinus ->
+   nahtlos, kein Zuruecksetzen). Alle Pixel ganzzahlig, Wasserhoehe unveraendert. */
 function drawWaterStrip(y,h,base,hi,lo) {
+  y = Math.round(y); h = Math.round(h);
   ctx.fillStyle=base; ctx.fillRect(0,y,W,h);
-  ctx.fillStyle=lo; ctx.fillRect(0,y+h*0.55,W,h*0.45);
-  // shoreline foam
-  ctx.fillStyle='rgba(255,255,255,0.35)';
-  for (let x=0;x<W;x+=3){ if (rnd(x+((t*0.05)|0))>0.6) ctx.fillRect(x,y,2,1); }
-  // two wave bands moving at different speeds
-  ctx.fillStyle=hi;
-  for (let x=0;x<W;x+=8){ const wy=y+4+Math.sin((x+t*0.5)*0.2)*2; ctx.fillRect(x,wy,4,1); }
-  ctx.fillStyle='rgba(255,255,255,0.22)';
-  for (let x=0;x<W;x+=11){ const wy=y+9+Math.sin((x-t*0.35)*0.16)*2; ctx.fillRect(x,wy,5,1); }
-  // sun glitter
+  ctx.fillStyle=lo; ctx.fillRect(0,y+Math.round(h*0.55),W,h-Math.round(h*0.55));
+  const bands = [
+    [4,  0.20,  0.55, 2,   hi],
+    [9,  0.16, -0.40, 2,   'rgba(255,255,255,0.22)'],
+    [15, 0.12,  0.30, 1.5, 'rgba(255,255,255,0.12)']
+  ];
+  for (const [off, k, sp, amp, col] of bands) {
+    if (off >= h) continue;
+    ctx.fillStyle = col;
+    for (let x = 0; x < W; x++) {
+      const ph = (x + t * sp) * k;
+      if (Math.sin(ph * 0.5 + 1.3) < 0.05) continue;            // Wellenkamm als unterbrochene Linie
+      ctx.fillRect(x, y + off + Math.round(Math.sin(ph) * amp), 1, 1);
+    }
+  }
+  // Uferschaum: langsam driftende Punkte statt Zufallsflackern
+  ctx.fillStyle='rgba(255,255,255,0.4)';
+  for (let i=0;i<18;i++){ const x = Math.round((i*14.3 + rnd(i)*9 + t*0.25) % W); ctx.fillRect(x, y, 2, 1); }
+  // Sonnenglitzer
   ctx.fillStyle='rgba(255,255,255,0.5)';
   for (let i=0;i<7;i++){
-    const gx=((i*41 + t*0.3)%W)|0, gy=y+3+((rnd(i)*h*0.5)|0);
+    const gx=Math.round((i*41 + t*0.3)%W), gy=y+3+((rnd(i)*h*0.5)|0);
     if (Math.sin(t*0.1+i)>0.3) ctx.fillRect(gx,gy,1,1);
   }
 }
@@ -273,8 +286,8 @@ function drawHat(cx, bottomY, facing, animKey, frame) {
   if (!state.hasHat) return;
   const tbl = HAT_OFF[animKey] || HAT_OFF.default;
   const [dx, dy] = tbl[Math.abs(frame || 0) % tbl.length];
-  const hx = cx + facing * dx;                  // Kopfmitte dieses Frames
-  const hy = bottomY - 26 + dy;                 // Krempen-Unterkante: 2 px unter der Kopfoberkante (28)
+  const hx = cx + facing * Math.round(dx * CHAR_SCALE);            // Kopfmitte dieses Frames
+  const hy = bottomY - Math.round(26 * CHAR_SCALE) + Math.round(dy * CHAR_SCALE);   // Krempen-Unterkante: 2 px unter der Kopfoberkante (28, skaliert)
   if (!drawSprite('hat', 0, hx, hy, facing)) {
     ctx.fillStyle = '#44444e'; ctx.fillRect(Math.round(hx) - 8, hy - 3, 16, 3); ctx.fillRect(Math.round(hx) - 4, hy - 8, 8, 5);
   }
@@ -296,7 +309,8 @@ const HAND = {
 function handAnchor(key, frame) {
   const h = HAND[key] || HAND.default;
   const a = h.frames[Math.abs(frame || 0) % h.frames.length];
-  return { x: a.x, y: a.y, front: h.front };
+  // Anker in Sprite-Pixeln, mit dem Figuren-Massstab mitskaliert (Griff bleibt in der Pfote)
+  return { x: Math.round(a.x * CHAR_SCALE), y: Math.round(a.y * CHAR_SCALE), front: h.front };
 }
 // Klingenwinkel: getragen = in der vorderen Pfote, Klinge nach oben und leicht
 // nach vorn (+0.3 rad) — das kleine Schwert liegt damit ganz vor dem Koerper,
@@ -332,7 +346,8 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
     // Parierstange 5, Klinge 6-13). In der Pfote: Frame 0, vertikal
     // gespiegelt -> Klinge nach oben, Drehpunkt auf dem Griff (Zeile 3).
     ctx.scale(1, -1);
-    ctx.drawImage(img, 0, 0, spec.w, spec.h, -Math.round(spec.w/2), -3, spec.w, spec.h);
+    const sw = Math.round(spec.w * CHAR_SCALE), sh = Math.round(spec.h * CHAR_SCALE);   // Schwert: exakt derselbe Faktor wie Bruno
+    ctx.drawImage(img, 0, 0, spec.w, spec.h, -Math.round(sw / 2), -Math.round(3 * CHAR_SCALE), sw, sh);
   } else {
     ctx.fillStyle = PAL.hilt; ctx.fillRect(-1, -2, 2, 4);
     ctx.fillStyle = PAL.sword; ctx.fillRect(-1, -11, 2, 9);
@@ -344,7 +359,7 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
     ctx.strokeStyle = `rgba(255,255,255,${0.5 * Math.sin(swing * Math.PI)})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(pawX, pawY, 11, a0 - (facing < 0 ? Math.PI : 0), angle - (facing < 0 ? Math.PI : 0), facing < 0);
+    ctx.arc(pawX, pawY, Math.round(11 * CHAR_SCALE), a0 - (facing < 0 ? Math.PI : 0), angle - (facing < 0 ? Math.PI : 0), facing < 0);
     ctx.stroke();
   }
 }
@@ -353,15 +368,18 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
 function placeholderOneShot(key, x, bottomY, anim) {
   if (key === 'star_flare' || key === 'star_swoop' || key === 'star_burst') { drawStarFinale(key, x, bottomY); return; }
   if (key === 'boat_sail') {
-    // Fahrt: Bruno sitzt im Boot (Beine hinter der nahen Bordwand), Boot schaukelt, Kielwasser
-    const bob = Math.sin(t * 0.25) * 1.2;
-    const bxr = x - 8, byr = bottomY + 4 + bob;
-    drawHeldSword(bxr, byr, 1, 0, 'bruno_idle', 0, 'back');
-    if (!drawSprite('bruno_idle', 0, bxr, byr, 1)) drawBrunoPlaceholder(bxr, byr, 1, null);
-    drawHat(bxr, byr, 1, 'bruno_idle', 0);
-    drawHeldSword(bxr, byr, 1, 0, 'bruno_idle', 0, 'front');
-    drawBoatHull(x, bottomY + bob, 0, false);
-    if (pRand() < 0.6) spawnParticle(x - 26, bottomY + 8, { vx: -22, spread: 14, up: 5, g: 0, life: 0.7, color: ['#cfefff', '#ffffff'] });
+    // Fahrt: Boot und Bruno sind EINE Einheit — Bruno steht an fester lokaler
+    // Position im Boot (Passagier), seine Beine verschwinden hinter der nahen
+    // Bordwand (hinterer Bootsteil -> Bruno -> Bordwand). Bob ganzzahlig.
+    const bob = Math.round(Math.sin(t * 0.12) * 1.5);
+    const bx = Math.round(x);
+    drawBoatHull(bx, bottomY + bob, 0, false, (px, py) => {
+      drawHeldSword(px, py, 1, 0, 'bruno_idle', 0, 'back');
+      if (!drawSprite('bruno_idle', 0, px, py, 1)) drawBrunoPlaceholder(px, py, 1, null);
+      drawHat(px, py, 1, 'bruno_idle', 0);
+      drawHeldSword(px, py, 1, 0, 'bruno_idle', 0, 'front');
+    });
+    if (pRand() < 0.6) spawnParticle(bx - 34, bottomY + 14, { vx: -22, spread: 14, up: 5, g: 0, life: 0.7, color: ['#cfefff', '#ffffff'] });
     return;
   }
   if (key === 'end_title') return;                      // Titel zeichnet drawEndScene() selbst

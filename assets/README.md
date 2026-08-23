@@ -29,7 +29,11 @@ Transparenter Hintergrund (PNG mit Alpha). Pixel Art, kein Antialiasing.
 | hat                | props/hat.png ✅            | 1      | 16x9         | Hut (Fedora), per Pillow erzeugt; hängt am Haken, danach Overlay auf Brunos Kopf (`drawHat`) |
 | fisher_evil        | props/fisher_evil.png ✅    | 5      | 20x32        | Fischer 2 (aus props/fisher_evil.gif) |
 | sword              | props/sword_small.png ✅    | 8      | 6x14         | Schwert (halbe Grösse), Drehung. Klinge zeigt im Sheet nach **unten**; im Altar dreht es sich, in der Pfote wird Frame 0 gespiegelt gezeigt. `props/sword.png` (12x29) liegt als Reserve bei |
-| boat               | props/boat.png (ok)         | 1      | 56x26        | Ruderboot Seitenansicht, erzeugt mit `tools/make_boat.py`; Schaukeln/Wrack im Code (`drawBoatHull`, `drawBoatWreck`) |
+| boat               | props/boat.png (ok)         | 1      | 72x29        | Ruderboot Seitenansicht, erzeugt mit `tools/make_boat.py`; Schaukeln/Wrack im Code (`drawBoatHull`, `drawBoatWreck`) |
+| boat_front         | props/boat_front.png (ok)   | 1      | 72x29        | nahe Bordwand (ab Zeile 9) — liegt bei der Fahrt vor Bruno |
+| treegate           | props/treegate.png (ok)     | 1      | 208x124      | Baumtor der Musterwahl (`tools/make_treegate.py`), Durchgang x 108..148; Ranken/Schnitzungen im Code |
+| chalet             | props/chalet.png (ok)       | 1      | 112x92       | Brunos Chalet (`tools/make_chalet.py`), unten-mittig auf (53, groundY) |
+| (Schrift)          | fonts/PixelifySans-*.ttf    | –      | –            | Pixel-Schrift für die ganze Oberfläche (SIL OFL, `fonts/OFL-PixelifySans.txt`) |
 | boat_break         | props/boat_break.png        | 6      | 34x20        | Boot zerbricht (falsche Wahl) |
 | gate_closed        | props/gate_closed.png       | 1      | 64x96        | (unbenutzt seit v6 — das Tor ist prozedurale Pixel-Art in `pixart.js`, `gateDraw`) |
 | gate_open          | props/gate_open.png         | 6      | 64x96        | (unbenutzt, s.o.) |
