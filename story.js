@@ -305,7 +305,7 @@ function starFinale(i) {
     { key:'bruno_walk', x: stopX, facing, dur: 0.6, frame: 3, fx:'jump', jumpH, sfx:'jump' },
     { key:'bruno_idle', x: stopX, facing, dur: 0.25, sfx:'land' }
   ], () => {
-    brunoX = stopX; brunoFacing = facing; brunoY = 0; brunoVY = 0;   // steht genau dort, wo er gelandet ist
+    brunoX = stopX; brunoFacing = facing; brunoY = -2; brunoVY = 0;   // steht genau dort, wo er gelandet ist
     showDialogue('dlg.stars.ok', { icon:'star', finalLabel:'ui.finish', onFinal: () => learnCard('star', true, () => goToScene('end')) });
   });
 }
@@ -383,7 +383,7 @@ function updateCleanup(dt) {
 }
 function endCleanup() {
   cleanup.active = false; cleanup.phase = null;
-  state.scene = 'end'; state.brunoHidden = false; brunoX = 128; brunoFacing = 1; brunoY = 0; brunoVY = 0;
+  state.scene = 'end'; state.brunoHidden = false; brunoX = 128; brunoFacing = 1; brunoY = -2; brunoVY = 0;
   Sfx.play('land');
   burst(128, groundY - 1, 8, { spread: 60, up: 25, g: 60, life: 0.4, color: 'rgba(220,205,175,0.85)' });
   ui.mode = null;
@@ -606,7 +606,7 @@ function quitToTitle() {
   cleanup.active = false; cleanup.phase = null;
   document.getElementById('codeblattBtn').classList.add('hidden');
   rollCodeblatt();
-  state.scene = 'home'; brunoX = scenes.home.startX; brunoY = 0; brunoVY = 0; brunoFacing = 1;
+  state.scene = 'home'; brunoX = scenes.home.startX; brunoY = -2; brunoVY = 0; brunoFacing = 1;
   Music.setScene('title');
   ui.mode = 'modal';
   updateProgress();
@@ -807,7 +807,7 @@ function applyScene(id) {
   updateProgress();
   state.enemyState = 'alive'; state.starTaken = -1; state.starCollected = false; state.starCollectT = -1;
   state.boatGone = null; state.brunoHidden = false; state.gateOpen = false; state.broomTaken = false;
-  brunoY = 0; brunoVY = 0; hopTimer = 1.8;
+  brunoY = -2; brunoVY = 0; hopTimer = 1.8;
   shake.t = 0; particles.length = 0; sceneTime = 0;
   recordCheckpoint(id);
   const lv = LEVELS[id];
@@ -897,7 +897,7 @@ function update(dt) {
     brunoVY += CONFIG.gravity * dt;
     brunoY -= brunoVY * dt;
     if (brunoY <= 0) {
-      brunoY = 0; brunoVY = 0;
+      brunoY = -2; brunoVY = 0;
       Sfx.play('land');
       burst(brunoX, groundY - 1, 6, { spread: 50, up: 20, g: 60, life: 0.35, color: 'rgba(220,205,175,0.85)' });
     }

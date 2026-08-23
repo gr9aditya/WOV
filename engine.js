@@ -253,7 +253,7 @@ const ui = { mode:null }; // null | 'panel' | 'modal' | 'anim' | 'transition'
 let timeScale = 1;        // Zeitlupe fuer das Finale (skaliert nur die Kulissen-Zeit t)
 let sceneTime = 0;        // s seit dem Aufdecken der Szene (Sonnenaufgang, Titel-Slam)
 let brunoX = 24, brunoFacing = 1;
-let brunoY = 0, brunoVY = 0;       // Sprung: Hoehe ueber dem Boden, Vertikalgeschwindigkeit (neg. = aufwaerts)
+let brunoY = -2, brunoVY = 0;       // Sprung: Hoehe ueber dem Boden, Vertikalgeschwindigkeit (neg. = aufwaerts)
 function jump() {
   if (brunoY > 0 || ui.mode !== null) return;
   brunoVY = -CONFIG.jumpVel;
