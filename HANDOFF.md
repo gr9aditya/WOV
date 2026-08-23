@@ -309,6 +309,19 @@ Felder bekommen.
   Berge, Ufer, Höhle, Palmen, Stalaktiten, Säulen, Sternenhimmel mehr.
 * `bg_inside` bleibt ohne Bild (die Stube ist code-gezeichnet).
 
+### Elfter Durchgang (eigene Musik)
+
+* Die synthetisierte Musik (Step-Sequencer, Oszillatoren, Notenmuster) ist
+  komplett raus. `Music` in core.js spielt jetzt Audiodateien aus
+  `assets/audio/` über normale `<audio>`-Elemente: `SCENE_MUSIC` (Szene ->
+  Dateipfad) ist die einzige Stelle, die man zum Umbelegen anfassen muss.
+  Gleicher Track in der Folgeszene = läuft weiter; anderer Track = Crossfade
+  (`CONFIG.musicFade`). Loop, Start erst mit dem Start-Knopf, Grundlautstärke
+  `CONFIG.musicVolume` = 0.3, Mute über den Musik-Knopf (persistiert), Pause
+  bei verstecktem Tab, Ladefehler = Konsolenwarnung, Spiel läuft weiter.
+  Titelbildschirm hat bewusst keinen Track (nicht in der Zuordnung).
+  Soundeffekte (`Sfx`) bleiben synthetisiert.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

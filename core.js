@@ -39,8 +39,8 @@ const CONFIG = {
   interactRange: 18,    // px — Abstand, ab dem ein Hotspot aktiv wird
   stepInterval: 0.24,   // s — Fussschritt-Sound/Staub beim Laufen
   particleMax: 220,     // hartes Limit, damit nichts unbegrenzt wachsen kann
-  musicVolume: 0.14,    // eigener Musik-Bus, deutlich unter dem Sfx-Master (0.22)
-  musicFade: 0.6,       // s — Crossfade beim Szenenwechsel
+  musicVolume: 0.3,     // Grundlautstaerke der Musik (Audio-Elemente), bewusst leise
+  musicFade: 0.8,       // s — Ueberblendung bei echtem Trackwechsel
   wipeTime: 0.35,       // s — Level-Wipe rein bzw. raus
   holdTime: 0.5,        // s — Level-Schild steht
   damageTime: 0.8,      // s — roter Schadensblitz klingt ab
@@ -225,220 +225,92 @@ document.addEventListener('click', e => {
   if (e.target && e.target.classList && e.target.classList.contains('btn')) Sfx.blip();
 }, true);
 
-/* ===================== 0b. MUSIK (Web Audio Step-Sequencer) =====================
-   Retro-Hintergrundmusik, komplett synthetisiert — keine Dateien.
-   Ein kleiner Sequencer: pro Spur mehrere Stimmen (Bass, Melodie, Pad)
-   plus eine Rausch-Percussion. Die Patterns sind Achtelnoten, '.' = Pause;
-   Voice-Patterns duerfen unterschiedlich lang sein (werden modulo gelesen).
-   Geplant wird ~1 Takt voraus ueber AudioContext.currentTime in einem
-   Lookahead-Timer (kein Oszillator pro Frame). Beim Szenenwechsel laeuft
-   die alte Spur ueber CONFIG.musicFade aus, die neue ein.
-   Eigener Gain-Bus (Music.master), getrennt vom Sfx-Master.           */
-const NOTE_FREQ = (() => {
-  const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const map = {};
-  for (let o = 0; o < 8; o++) names.forEach((n, i) => { map[n + o] = 440 * Math.pow(2, (o * 12 + i - 57) / 12); });
-  return map;
-})();
-const MUSIC_TRACKS = {
-  // Titelbildschirm: sanftes D-Dur-Arpeggio, kein Schlagzeug
-  title: { bpm: 84, voices: [
-    { type:'triangle', vol:0.11, len:7.5,
-      pat:'D2 . . . . . . . G2 . . . . . . . A1 . . . . . . . D2 . . . . . . .' },
-    { type:'triangle', vol:0.07, len:0.9,
-      pat:'D4 F#4 A4 D5 A4 F#4 D4 . G4 B4 D5 G5 D5 B4 G4 . A4 C#5 E5 A5 E5 C#5 A4 . D5 . A4 . F#4 . D4 .' },
-    { type:'sine', vol:0.05, len:7.5,
-      pat:'F#4 . . . . . . . G4 . . . . . . . E4 . . . . . . . F#4 . . . . . . .' } ],
-    perc:'. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .' },
-  // ruhig / pastoral — C-Dur, Dreiklang-Bass, sanfte Dreieck-Melodie, leise Hi-Hats
-  calm: { bpm: 96, voices: [
-    { type:'triangle', vol:0.12, len:1.8,
-      pat:'C2 . . . G2 . . . A1 . . . E2 . . . F2 . . . C2 . . . G2 . . . G2 . . .' },
-    { type:'triangle', vol:0.075, len:0.9,
-      pat:'E4 . G4 . A4 . . . G4 . E4 . . . . . C4 . D4 . E4 . . . D4 . C4 . . . . .' },
-    { type:'sine', vol:0.05, len:7.5,
-      pat:'C4 . . . . . . . . . . . . . . . F4 . . . . . . . G4 . . . . . . .' } ],
-    perc:'h . . . h . . . h . . . h . . . h . . . h . . . h . . . h . h .' },
-  // angespannt / Moll — A-Moll, pochender Bass, sparsame Melodie, Kick+Snare
-  tense: { bpm: 104, voices: [
-    { type:'triangle', vol:0.12, len:0.8,
-      pat:'A1 . A1 . A1 . . . F1 . F1 . F1 . . . G1 . G1 . G1 . . . E1 . E1 . E1 . E1 .' },
-    { type:'triangle', vol:0.09, len:1.5,
-      pat:'A4 . . . C5 . . . B4 . . . . . . . G4 . . . A4 . . . E4 . . . . . . .' },
-    { type:'sawtooth', vol:0.02, len:7.6,
-      pat:'A2 . . . . . . . F2 . . . . . . . G2 . . . . . . . E2 . . . . . . .' } ],
-    perc:'k . . . s . . . k . . . s . . . k . . . s . . . k . k . s . . .' },
-  // treibend / Kampf — E-Moll, Achtel-Bass, Riff, durchgehendes Schlagzeug
-  battle: { bpm: 150, voices: [
-    { type:'square', vol:0.08, len:0.9,
-      pat:'E2 E2 E2 E2 G2 G2 E2 E2 D2 D2 D2 D2 B1 B1 D2 D2 E2 E2 E2 E2 G2 G2 A2 A2 C2 C2 C2 C2 B1 B1 B1 B1' },
-    { type:'triangle', vol:0.08, len:0.8,
-      pat:'E5 . D5 E5 G5 . E5 . D5 . . . B4 . D5 . E5 . D5 E5 G5 . A5 . G5 . E5 . B4 . . .' } ],
-    perc:'k h s h k h s h k h s h k h s s k h s h k h s h k k s h k h s s' },
-  // funkelnd / wundersam — D-Dur Arpeggien, Pad, Glockenpunkte
-  stars: { bpm: 88, voices: [
-    { type:'triangle', vol:0.10, len:7.5,
-      pat:'D2 . . . . . . . A1 . . . . . . . B1 . . . . . . . G1 . . . . . . .' },
-    { type:'triangle', vol:0.075, len:0.95,
-      pat:'D5 F#5 A5 D6 A5 F#5 D5 . A4 C#5 E5 A5 E5 C#5 A4 . B4 D5 F#5 B5 F#5 D5 B4 . G4 B4 D5 G5 D5 B4 G4 .' },
-    { type:'sine', vol:0.06, len:7.5,
-      pat:'F#4 . . . . . . . E4 . . . . . . . F#4 . . . . . . . G4 . . . . . . .' },
-    { type:'sine', vol:0.045, len:2.5,
-      pat:'. . . . . . A6 . . . . . . . . . . . . . . . F#6 . . . . . . . D6 .' } ],
-    perc:'h . . . . . h . . . . . h . . . . . h . . . . . h . . . . . h .' },
-  // Abspann: froehliche C-Dur-Fanfare im Loop
-  end: { bpm: 120, voices: [
-    { type:'triangle', vol:0.12, len:1.8,
-      pat:'C2 . . . G2 . . . F2 . . . G2 . . . C2 . . . E2 . . . F2 . . . G2 . . .' },
-    { type:'square', vol:0.055, len:0.9,
-      pat:'C5 . E5 . G5 . . . A5 . G5 . E5 . . . F5 . A5 . C6 . . . B5 . G5 . E5 . C5 .' },
-    { type:'triangle', vol:0.05, len:3.8,
-      pat:'E4 . . . G4 . . . F4 . . . B4 . . . E4 . . . G4 . . . A4 . . . B4 . . .' } ],
-    perc:'k . h . s . h . k . h . s . h . k . h . s . h . k . h . s . h h' }
-};
-// Szene -> Spur
+/* ===================== 0b. MUSIK (eigene Audiodateien) =====================
+   Hintergrundmusik kommt aus assets/audio/ und laeuft ueber normale
+   <audio>-Elemente (kein Web Audio, keine Bibliothek). Pro Szene ein Track:
+
+   SCENE_MUSIC: Szene -> Dateipfad. Hier aendern, wenn ein anderer Track
+   laufen soll. null = keine Musik (Titelbildschirm ist bewusst nicht
+   zugeordnet).                                                            */
 const SCENE_MUSIC = {
-  title:'title',
-  inside:'calm', home:'calm', river:'calm', sword:'calm',
-  gate:'tense', fork:'tense', confirmgate:'tense',
-  spider:'battle', croc:'battle',
-  stars:'stars', end:'end'
+  inside:      'assets/audio/at_home.mp3',            // Stube (Hut aufsetzen)
+  home:        'assets/audio/outside_adventure.mp3',  // vor dem Chalet, Post oeffnen
+  river:       'assets/audio/outside_adventure.mp3',  // Fischer und Boote
+  sword:       'assets/audio/outside_adventure.mp3',  // Lichtung mit dem Schwert
+  end:         'assets/audio/outside_adventure.mp3',  // Schlussszene
+  gate:        'assets/audio/tor.mp3',                // erstes Tor, Musterwahl
+  fork:        'assets/audio/tor.mp3',                // Weggabelung Hoehle / Sumpf
+  confirmgate: 'assets/audio/tor.mp3',                // zweites Tor, Bestaetigungscode
+  spider:      'assets/audio/spider_fight.mp3',       // Spinnenhoehle
+  croc:        'assets/audio/crocodile_fight.mp3',    // Krokodilsumpf
+  stars:       'assets/audio/sterne.wav',             // Sternenkammer
+  title:       null                                   // Titelbildschirm: kein Track zugeordnet
 };
+
+/* Music — spielt SCENE_MUSIC[szene] in Schleife.
+   - gleicher Track in der naechsten Szene: laeuft einfach weiter (kein Neustart)
+   - anderer Track: alter blendet aus, neuer blendet ein (CONFIG.musicFade)
+   - startet erst nach der ersten Nutzergeste (Music.start() im Start-Knopf)
+   - Mute ueber Prefs.data.music (Knopf oben links), Grundlautstaerke CONFIG.musicVolume
+   - Ladefehler: Warnung in der Konsole, das Spiel laeuft normal weiter     */
 const Music = {
-  ctx: null, master: null, layers: [], timer: null, started: false, current: null, scene: null,
+  started: false, scene: null, current: null,       // current = { src, el }
+  els: {},                                          // src -> HTMLAudioElement (einmal erzeugt, dann wiederverwendet)
+  fades: [],                                        // { el, from, to, t0, dur, stopAtEnd }
+  timer: null,
   get enabled() { return Prefs.data.music; },
 
-  init() {
-    if (this.master) return;
-    Sfx.init();
-    if (!Sfx.ctx) return;
-    this.ctx = Sfx.ctx;
-    this.master = this.ctx.createGain();
-    this.master.gain.value = this.enabled ? CONFIG.musicVolume : 0;
-    this.master.connect(this.ctx.destination);
+  el(src) {
+    if (this.els[src]) return this.els[src];
+    const el = new Audio();
+    el.loop = true; el.preload = 'auto'; el.volume = 0; el.muted = !this.enabled;
+    el.addEventListener('error', () => console.warn('Musik konnte nicht geladen werden:', src));
+    el.src = src;
+    return (this.els[src] = el);
   },
-  // erst nach dem Start-Knopf (Autoplay-Policy)
-  start() { this.started = true; this.init(); if (this.scene) this.setScene(this.scene); },
+  start() { this.started = true; if (this.scene !== null) this.setScene(this.scene); },
   setScene(scene) {
     this.scene = scene;
     if (!this.started) return;
-    this.play(SCENE_MUSIC[scene] || null);
+    const src = SCENE_MUSIC[scene] || null;
+    if (this.current && this.current.src === src) return;             // derselbe Track: weiterlaufen lassen
+    const old = this.current;
+    if (old) { this.fadeTo(old.el, 0, CONFIG.musicFade, true); }      // ausblenden, dann pausieren
+    this.current = null;
+    if (!src) return;
+    const el = this.el(src);
+    this.current = { src, el };
+    el.volume = 0;
+    const p = el.play();
+    if (p && p.catch) p.catch(err => console.warn('Musik kann nicht abgespielt werden:', src, err && err.message));
+    this.fadeTo(el, CONFIG.musicVolume, CONFIG.musicFade, false);      // einblenden
   },
-  play(name) {
-    this.init();
-    if (!this.ctx) return;
-    if (this.current && this.current.name === name) return;
-    const now = this.ctx.currentTime;
-    this.prune(now);
-    if (this.current) {                     // alte Spur ausblenden
-      const old = this.current;
-      old.gain.gain.cancelScheduledValues(now);
-      old.gain.gain.setValueAtTime(old.gain.gain.value, now);
-      old.gain.gain.linearRampToValueAtTime(0, now + CONFIG.musicFade);
-      old.dieAt = now + CONFIG.musicFade;
-      this.current = null;
-    }
-    if (!name || !MUSIC_TRACKS[name]) return;
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(1, now + CONFIG.musicFade);
-    g.connect(this.master);
-    const spec = MUSIC_TRACKS[name];
-    const layer = {
-      name, spec, gain: g, step: 0, nextTime: now + 0.05, dieAt: null,
-      voices: spec.voices.map(v => ({ ...v, notes: v.pat.trim().split(/\s+/) })),
-      perc: spec.perc.trim().split(/\s+/)
-    };
-    this.layers.push(layer);
-    this.current = layer;
-    this.ensureTimer();
-  },
-  ensureTimer() {
-    if (this.timer || !this.enabled || document.hidden || !this.ctx) return;
-    this.timer = setInterval(() => this.tick(), 90);
-    this.tick();
-  },
-  stopTimer() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
-  // ausgeblendete Spuren wegraeumen. Laeuft kein Timer (Tab versteckt, Musik
-  // aus), wurde fuer sie auch nichts geplant -> sofort weg, sonst nach dem Fade.
-  prune(now) {
-    for (let i = this.layers.length - 1; i >= 0; i--) {
-      const L = this.layers[i];
-      const faded = !this.timer || this.ctx.state !== 'running' || now > L.dieAt + 0.1;
-      if (L.dieAt !== null && faded) { L.gain.disconnect(); this.layers.splice(i, 1); }
-    }
+  fadeTo(el, to, dur, stopAtEnd) {
+    this.fades = this.fades.filter(f => f.el !== el);
+    this.fades.push({ el, from: el.volume, to, t0: performance.now(), dur: dur * 1000, stopAtEnd });
+    if (!this.timer) this.timer = setInterval(() => this.tick(), 40);
   },
   tick() {
-    const now = this.ctx.currentTime;
-    this.prune(now);
-    for (let i = this.layers.length - 1; i >= 0; i--) {
-      const L = this.layers[i];
-      const stepDur = 60 / L.spec.bpm / 2;          // Achtel
-      const lookahead = stepDur * 8;                 // ~1 Takt voraus
-      while (L.nextTime < now + lookahead) {
-        if (L.dieAt === null || L.nextTime < L.dieAt) this.scheduleStep(L, L.step, L.nextTime, stepDur);
-        L.step++; L.nextTime += stepDur;
-      }
+    const now = performance.now();
+    for (let i = this.fades.length - 1; i >= 0; i--) {
+      const f = this.fades[i];
+      const k = Math.min(1, (now - f.t0) / f.dur);
+      f.el.volume = f.from + (f.to - f.from) * k;
+      if (k >= 1) { if (f.stopAtEnd) { f.el.pause(); f.el.currentTime = 0; } this.fades.splice(i, 1); }
     }
-    if (!this.layers.length) this.stopTimer();
+    if (!this.fades.length) { clearInterval(this.timer); this.timer = null; }
   },
-  scheduleStep(L, step, at, stepDur) {
-    for (const v of L.voices) {
-      const n = v.notes[step % v.notes.length];
-      if (n !== '.' && NOTE_FREQ[n]) this.note(NOTE_FREQ[n], at, stepDur * v.len, v.type, v.vol, L.gain);
-    }
-    const d = L.perc[step % L.perc.length];
-    if (d !== '.') this.drum(d, at, L.gain);
-  },
-  note(freq, at, dur, type, vol, out) {
-    const o = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, at);
-    g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(vol, at + 0.012);
-    g.gain.setValueAtTime(vol, at + Math.max(0.012, dur * 0.5));
-    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    o.connect(g); g.connect(out);
-    o.start(at); o.stop(at + dur + 0.03);
-  },
-  drum(kind, at, out) {
-    if (kind === 'k') {                             // Kick: kurzer Pitch-Drop
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(150, at); o.frequency.exponentialRampToValueAtTime(40, at + 0.12);
-      g.gain.setValueAtTime(0.22, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
-      o.connect(g); g.connect(out); o.start(at); o.stop(at + 0.16);
-      return;
-    }
-    // Hi-Hat / Snare aus dem Rauschpuffer
-    const src = this.ctx.createBufferSource(); src.buffer = Sfx.noiseBuf; src.loop = true;
-    const flt = this.ctx.createBiquadFilter();
-    const g = this.ctx.createGain();
-    const dur = kind === 's' ? 0.12 : 0.04;
-    flt.type = kind === 's' ? 'bandpass' : 'highpass';
-    flt.frequency.value = kind === 's' ? 1800 : 7000; flt.Q.value = kind === 's' ? 0.8 : 1;
-    g.gain.setValueAtTime(kind === 's' ? 0.16 : 0.05, at);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    src.connect(flt); flt.connect(g); g.connect(out);
-    src.start(at); src.stop(at + dur + 0.02);
-  },
+  // Mute-Knopf: Position bleibt erhalten, nur stumm
   setEnabled(on) {
     Prefs.data.music = on; Prefs.save();
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setValueAtTime(this.master.gain.value, now);
-    this.master.gain.linearRampToValueAtTime(on ? CONFIG.musicVolume : 0, now + 0.3);
-    if (on) this.resume(); else this.suspend();
+    for (const src in this.els) this.els[src].muted = !on;
   },
-  // Tab versteckt / Musik aus: Timer stoppen, bereits geplante Noten laufen aus
-  suspend() { this.stopTimer(); },
+  // Tab versteckt: pausieren, sichtbar: weiter
+  suspend() { if (this.current) this.current.el.pause(); },
   resume() {
-    if (!this.started || !this.enabled || document.hidden || !this.ctx) return;
-    const now = this.ctx.currentTime;
-    for (const L of this.layers) if (L.nextTime < now) L.nextTime = now + 0.05;
-    this.ensureTimer();
+    if (!this.started || !this.current) return;
+    const p = this.current.el.play();
+    if (p && p.catch) p.catch(() => {});
   }
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) Music.suspend(); else Music.resume(); });
