@@ -1,0 +1,260 @@
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #0d1b2a;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+#wrap { position: relative; --gs: 4; }
+
+/* ---------- Text-Layer in Bildschirmaufloesung (labels.js) ----------
+   Position/Groesse in Spiel-Pixeln ueber --gx/--gy/--fs, umgerechnet mit
+   --gs (Bildschirm-px pro Spiel-px, von fitCanvas gesetzt). Liegt genau
+   ueber der Canvas-Flaeche (4px = Canvas-Rahmen).                      */
+#labelLayer {
+  position: absolute; left: 4px; top: 4px;
+  width: calc(256px * var(--gs)); height: calc(144px * var(--gs));
+  pointer-events: none; overflow: hidden;
+}
+#sceneLabels, #wipeLabels { position: absolute; inset: 0; }
+.lbl {
+  position: absolute; white-space: nowrap; line-height: 1;
+  font-family: inherit; font-weight: bold;
+  left: calc(var(--gx) * var(--gs) * 1px);
+  top: calc(var(--gy) * var(--gs) * 1px);
+  font-size: calc(var(--fs, 9) * var(--gs) * 1px);
+  color: var(--col, #f4e9c9);
+  text-shadow: calc(var(--gs) * 1px) calc(var(--gs) * 1px) 0 #1b1024;
+}
+.lbl.c { transform: translateX(-50%); }
+.lbl.r { transform: translateX(-100%); }
+.lbl.flat { text-shadow: none; }
+.lbl.title {
+  --fs: 13; --col: #ffd23f;
+  text-shadow: calc(var(--gs) * -1px) 0 0 #1b1024, calc(var(--gs) * 1px) 0 0 #1b1024,
+               0 calc(var(--gs) * -1px) 0 #1b1024, 0 calc(var(--gs) * 1px) 0 #1b1024,
+               calc(var(--gs) * 1px) calc(var(--gs) * 1px) 0 #1b1024;
+}
+.lbl.slam { animation: lblSlam 1.2s linear both; transform-origin: 50% 50%; }
+@keyframes lblSlam {
+  0%   { transform: translateX(-50%) scale(3.6); opacity: 0; }
+  12%  { opacity: 1; }
+  46%  { transform: translateX(-50%) scale(1); }
+  55%  { transform: translateX(-50%) scale(1.06); }
+  74%  { transform: translateX(-50%) scale(0.975); }
+  93%  { transform: translateX(-50%) scale(1.01); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+/* LEVEL-Schild im Wipe */
+#wipeLabels .level1 { --gx: 128; --gy: 54; --fs: 9; --col: #ffd23f; }
+#wipeLabels .rule   { --gx: 128; --gy: 66; width: calc(48px * var(--gs)); height: calc(1px * var(--gs)); background: #ffd23f; text-shadow: none; }
+#wipeLabels .level2 { --gx: 128; --gy: 70; --fs: 9; --col: #f4e9c9; }
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  border: 4px solid #1b1024;
+  box-shadow: 0 0 0 4px #4a3a2c, 0 20px 60px rgba(0,0,0,0.6);
+}
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+#loadingScreen {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #0d1b2a; color: #f4e9c9; font-size: 24px; letter-spacing: 2px;
+}
+#loadingScreen .dots span { animation: dotpulse 1.2s infinite; }
+#loadingScreen .dots span:nth-child(2) { animation-delay: 0.2s; }
+#loadingScreen .dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%,100%{opacity:0.2} 40%{opacity:1} }
+
+/* ---------- Titelbildschirm ---------- */
+#startScreen {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(13,17,28,0.62);
+  animation: fadein 0.5s ease-out;
+}
+#titleCard {
+  text-align: center; color: #f4e9c9;
+  background: #2a1f2e;
+  background-image: linear-gradient(rgba(255,255,255,0.03) 50%, transparent 50%);
+  background-size: 100% 8px;
+  border: 4px solid #1b1024;
+  box-shadow: 0 0 0 4px #8a5a2e, 0 0 0 8px #1b1024, 8px 8px 0 8px rgba(0,0,0,0.45);
+  padding: 26px 40px 22px;
+  animation: cardup 0.5s cubic-bezier(0.2,1.4,0.4,1);
+  image-rendering: pixelated;
+}
+#titleCard h1 {
+  margin: 4px 0 8px; font-size: 34px; letter-spacing: 3px; line-height: 1.3;
+  color: #ffd23f; text-shadow: 2px 2px 0 #1b1024;
+}
+#titleCard .title-star { font-size: 34px; color: #ffd23f; animation: starspin 3s linear infinite; text-shadow: 3px 3px 0 #1b1024; }
+#titleCard .subtitle { font-size: 17px; opacity: 0.85; line-height: 1.6; margin: 0 0 18px; }
+#titleCard .controls-hint { font-size: 15px; opacity: 0.7; margin: 16px 0 0; letter-spacing: 1px; }
+.btn.big { font-size: 22px; padding: 14px 26px; }
+@keyframes fadein { from{opacity:0} to{opacity:1} }
+@keyframes cardup { from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1} }
+@keyframes starspin { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25) rotate(12deg)} }
+
+#codeblattBtn {
+  position: absolute; top: 10px; right: 10px;
+  padding-left: 62px !important; min-height: 40px;
+  background-repeat: no-repeat; background-position: 8px center; background-size: 48px 32px;
+  image-rendering: pixelated;
+  font-family: inherit; font-size: 17px; letter-spacing: 1px;
+  background: #f4e9c9; color: #3a2418; border: 2px solid #1b1024;
+  padding: 6px 8px; cursor: pointer; text-transform: uppercase;
+  box-shadow: 2px 2px 0 #1b1024;
+}
+#codeblattBtn:active { transform: translate(2px,2px); box-shadow: none; }
+
+#topbar { position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; }
+#topbar button {
+  font-family: inherit; font-size: 17px; letter-spacing: 1px;
+  background: #f4e9c9; color: #3a2418; border: 2px solid #1b1024;
+  padding: 6px 8px; cursor: pointer; text-transform: uppercase;
+  box-shadow: 2px 2px 0 #1b1024;
+}
+#topbar button.off { background: #8a8a8a; color: #2a2a2a; }
+#topbar button:active { transform: translate(2px,2px); box-shadow: none; }
+
+#hotspotPrompt {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-family: inherit; font-size: 20px; letter-spacing: 1px;
+  background: #ffd23f; color: #1b1024; border: 2px solid #1b1024;
+  padding: 9px 16px; cursor: pointer; text-transform: uppercase;
+  box-shadow: 2px 2px 0 #1b1024;
+  animation: bump 1s infinite;
+}
+@keyframes bump { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-3px)} }
+
+#uiLayer {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
+}
+.panel {
+  pointer-events: auto;
+  width: 94%; margin-bottom: 10px; box-sizing: border-box;
+  max-height: calc(100% - 20px); overflow-y: auto;
+  background: #f4e9c9; color: #2a1810;
+  border: 3px solid #1b1024; box-shadow: 4px 4px 0 #1b1024;
+  padding: 14px 18px; font-size: 20px; line-height: 1.45;
+  animation: panelup 0.22s cubic-bezier(0.2,1.2,0.4,1);
+}
+@keyframes panelup { from{transform:translateY(10px); opacity:0} to{transform:none; opacity:1} }
+.panel .line { min-height: 1.45em; }
+.panel .line { margin-bottom: 10px; white-space: pre-wrap; }
+.panel .btnrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.btn {
+  font-family: inherit; font-size: 18px; letter-spacing: 0.5px; line-height: 1.2;
+  background: #3f5e42; color: #f4e9c9; border: 2px solid #1b1024;
+  padding: 9px 14px; cursor: pointer; text-transform: uppercase;
+  box-shadow: 2px 2px 0 #1b1024;
+}
+.btn:hover { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 2px 3px 0 #1b1024; }
+.btn:active { transform: translate(2px,2px); box-shadow: none; filter: none; }
+.btn:focus-visible, #codeblattBtn:focus-visible, #topbar button:focus-visible {
+  outline: 2px solid #ffd23f; outline-offset: 2px;
+}
+.btn { transition: transform 0.08s, box-shadow 0.08s, filter 0.08s; }
+.btn.danger { background: #a13d3d; }
+.btn.gold { background: #ad8a2a; }
+input[type=text] {
+  font-family: inherit; font-size: 22px; padding: 8px 10px;
+  border: 2px solid #1b1024; width: 100%; box-sizing: border-box;
+  margin-top: 4px; text-transform: uppercase; letter-spacing: 1px;
+  background: #fffbee; color: #2a1810;
+}
+input[type=text]:focus { outline: 2px solid #ad8a2a; outline-offset: 1px; }
+
+#modalOverlay {
+  position: absolute; inset: 0; background: rgba(13,27,42,0.82);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadein 0.18s ease-out;
+}
+#codeblattCard {
+  width: 90%; max-height: 94%; overflow-y: auto; box-sizing: border-box;
+  background: #f4e9c9; color: #2a1810;
+  border: 3px solid #1b1024; box-shadow: 6px 6px 0 #1b1024;
+  padding: 16px 20px; font-size: 19px; line-height: 1.5;
+  animation: cardup 0.22s cubic-bezier(0.2,1.2,0.4,1);
+}
+#codeblattCard h3 {
+  margin: 0 0 10px 0; font-size: 22px; letter-spacing: 1px;
+  border-bottom: 2px solid #1b1024; padding-bottom: 6px;
+}
+#codeblattCard .entry { margin-bottom: 8px; }
+#codeblattCard .entry b { display: block; font-size: 15px; text-transform: uppercase; opacity: 0.7; }
+#codeblattCard .val { font-size: 24px; font-weight: bold; }
+#codeblattCard .btnrow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+
+
+/* Symbole (Muster, Sterne) in Buttons und auf dem Codeblatt */
+img.sym { width: 36px; height: 36px; image-rendering: pixelated; vertical-align: middle; margin: 0 3px; }
+#codeblattCard img.sym { width: 30px; height: 30px; }
+#codeblattCard img.sym.hat { width: 48px; height: 27px; }
+
+/* Systemweite Einstellung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  .panel, #codeblattCard, #startScreen, #titleCard, #modalOverlay { animation: none; }
+  .lbl.slam { animation: none; }
+  #hotspotPrompt { animation: none; }
+  #titleCard .title-star { animation: none; }
+}
+
+
+/* ---------- Pausenmenue (Esc) ---------- */
+#pauseMenu {
+  width: 70%; max-width: 520px; max-height: 94%; overflow-y: auto; box-sizing: border-box;
+  background: #f4e9c9; color: #2a1810; text-align: center;
+  border: 3px solid #1b1024; box-shadow: 6px 6px 0 #1b1024;
+  padding: 16px 20px; font-size: 19px; line-height: 1.5;
+  animation: cardup 0.22s cubic-bezier(0.2,1.2,0.4,1);
+}
+#pauseMenu h3 { margin: 0 0 12px; font-size: 22px; letter-spacing: 2px; border-bottom: 2px solid #1b1024; padding-bottom: 6px; }
+.btnrow.col { flex-direction: column; align-items: stretch; }
+.menurow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; font-size: 16px; }
+.btn.small { font-size: 15px; padding: 6px 10px; }
+.btn.off { background: #8a8a8a; color: #2a2a2a; }
+.langrow { display: flex; gap: 8px; justify-content: center; margin: 0 0 14px; }
+
+/* ---------- Auswahl-Knoepfe: Nummer-Badge, Symbolreihen ---------- */
+.btn .key { display: inline-block; min-width: 1.2em; margin-right: 8px; padding: 0 4px; background: rgba(0,0,0,0.35); border-radius: 2px; font-size: 0.85em; }
+.btn.symrow { display: inline-flex; align-items: center; gap: 4px; }
+.symsep { opacity: 0.6; margin: 0 2px; }
+.symname { font-size: 0.8em; }
+.panel.symbols .btnrow { gap: 10px; }
+#codeblattCard .val.symrow { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+#codeblattCard .cardhint { font-size: 14px; opacity: 0.7; margin-top: 4px; }
+
+/* ---------- Lernkarte ---------- */
+.panel.learn { border-color: #ad8a2a; background: #fff6d6; }
+.panel.learn.fail { border-color: #a13d3d; background: #ffe3de; }
+.learntag { display: inline-block; background: #1b1024; color: #ffd23f; padding: 2px 8px; margin-bottom: 6px; font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ---------- Abschluss: Zuordnungstabelle ---------- */
+.panel.endpanel { max-height: calc(100% - 20px); }
+.mapping { width: 100%; border-collapse: collapse; font-size: 0.8em; margin: 6px 0; }
+.mapping th, .mapping td { border: 1px solid #1b1024; padding: 4px 6px; text-align: left; vertical-align: top; }
+.mapping th { background: #1b1024; color: #f4e9c9; }
+.mapping tr:nth-child(even) td { background: rgba(0,0,0,0.05); }
+details.mapbox, details.whybox { margin: 6px 0; }
+details summary { cursor: pointer; font-weight: bold; }
+details p { margin: 6px 0 0; font-size: 0.9em; }
+
+/* ---------- Touch-Steuerung (grobe Zeiger: Tablet/Handy) ---------- */
+#touchbar { display: none; position: absolute; left: 0; right: 0; bottom: 10px; justify-content: space-between; padding: 0 12px; pointer-events: none; z-index: 4; }
+#touchbar button {
+  pointer-events: auto; width: 64px; height: 64px; font-size: 28px; font-family: inherit;
+  background: rgba(244,233,201,0.85); color: #1b1024; border: 3px solid #1b1024; box-shadow: 3px 3px 0 #1b1024;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+#touchbar button:active { transform: translate(3px,3px); box-shadow: none; }
+#touchbar button:nth-child(2) { margin-right: auto; margin-left: 8px; }
+@media (pointer: coarse) { #touchbar { display: flex; } }
+#hotspotPrompt:focus-visible, #touchbar button:focus-visible, #pauseMenu .btn:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
