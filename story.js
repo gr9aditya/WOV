@@ -188,7 +188,7 @@ defScene('fork', {
 
 function combatScene(kind, bg) {
   defScene(kind, {
-    startX: 24, bg,
+    startX: 24, bg, hud: () => drawBossHud(kind),
     hotspots: [
       { id:'enemy', x:150, range:72, label: L('hs.attack'),
         onInteract: () => {
@@ -286,24 +286,26 @@ function pickStar(i) {
    Lichtschweif zu Bruno, Schockwelle + Funkenregen + Blitz, Fanfare — und
    dann hebt der Stern Bruno hoch und traegt ihn oben rechts aus dem Bild.
    Blitz, Zeitlupe und Shake haengen am FX-Schalter.                     */
+/* Finale: Bruno laeuft am Boden zum gewaehlten Stern (normale Laufgeschwindigkeit
+   und -animation), haelt davor an, springt kontrolliert hoch, sammelt den Stern
+   im Sprung ein (Licht + Partikel in der Sternfarbe, siehe drawStarsScene),
+   landet wieder auf der Bodenlinie — und erst dann laeuft die bestehende
+   Abschlusslogik (Dialog, Lernkarte, Endszene). Eingabe ist waehrend der
+   Sequenz gesperrt (ui.mode 'anim'), danach wie gehabt. Kein Flug mehr.     */
 function starFinale(i) {
   const st = STARS[i];
-  const fxOn = Prefs.data.shake;
-  const tx = brunoX, ty = groundY - 40;
+  const facing = st.x >= brunoX ? 1 : -1;
+  const stopX = st.x - facing * 8;                                  // Sammelpunkt: knapp vor dem Stern
+  const dist = Math.abs(stopX - brunoX);
+  const jumpH = groundY - Math.round(28 * CHAR_SCALE) - STAR_Y + 8; // Scheitel: Oberkoerper/Haende erreichen den Stern
   playSequence([
-    { key:'star_flare', x:st.x, bottomY:STAR_Y, dur: fxOn ? 0.55 : 0.3,
-      onStart: () => { state.starTaken = i; if (fxOn) timeScale = 0.05; } },
-    { key:'star_swoop', x:st.x, bottomY:STAR_Y, toX:tx, toY:ty, dur:0.7, sfx:'fanfare',
-      onStart: () => { timeScale = 1; } },
-    { key:'star_burst', x:tx, bottomY:ty, dur:1.0, shake: fxOn ? 3.5 : 0, shakeDur:0.5,
-      onStart: () => {
-        burst(tx, ty, 70, { spread: 160, up: 120, g: 60, life: 1.1, color: [st.c, '#ffffff', '#ffe999', '#ffb347'], size: 2 });
-        burst(tx, ty, 30, { spread: 60, up: 40, g: -20, life: 1.4, color: ['#fff6cc', st.c] });
-      } },
-    { key:'bruno_idle', fromX: tx, toX: tx + 150, facing: 1, dur: 1.6, fx:'flyout', sfx:'star' }
+    { key:'bruno_walk', fromX: brunoX, toX: stopX, facing, dur: Math.max(0.05, dist / CONFIG.walkSpeed),
+      onStart: () => { state.starTaken = i; } },
+    { key:'bruno_idle', x: stopX, facing, dur: 0.15, onStart: () => { brunoX = stopX; brunoFacing = facing; } },
+    { key:'bruno_walk', x: stopX, facing, dur: 0.6, frame: 3, fx:'jump', jumpH, sfx:'jump' },
+    { key:'bruno_idle', x: stopX, facing, dur: 0.25, sfx:'land' }
   ], () => {
-    timeScale = 1;
-    state.brunoHidden = true;                      // er ist mit dem Stern davongeflogen
+    brunoX = stopX; brunoFacing = facing; brunoY = 0; brunoVY = 0;   // steht genau dort, wo er gelandet ist
     showDialogue('dlg.stars.ok', { icon:'star', finalLabel:'ui.finish', onFinal: () => learnCard('star', true, () => goToScene('end')) });
   });
 }
@@ -803,7 +805,7 @@ function applyScene(id) {
   transition.applied = true;
   state.scene = id; brunoX = scenes[id].startX; brunoFacing = 1; brunoVel = 0;
   updateProgress();
-  state.enemyState = 'alive'; state.starTaken = -1;
+  state.enemyState = 'alive'; state.starTaken = -1; state.starCollected = false; state.starCollectT = -1;
   state.boatGone = null; state.brunoHidden = false; state.gateOpen = false; state.broomTaken = false;
   brunoY = 0; brunoVY = 0; hopTimer = 1.8;
   shake.t = 0; particles.length = 0; sceneTime = 0;

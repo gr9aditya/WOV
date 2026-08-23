@@ -364,9 +364,33 @@ function drawHeldSword(cx, bottomY, facing, swing, animKey, frame, layer, force)
   }
 }
 
+/* Debug-Ansicht (CONFIG.debug, ?debug=1): rote Bodenlinie, cyan Sprite-Box,
+   gelbe Linie = tatsaechlich sichtbare Fuss-Unterkante (gemessen), magenta Pivot,
+   Text mit der Luecke in Spiel-Pixeln. Nur fuer die Entwicklung.          */
+function drawDebugFeet() {
+  const st = sequence && sequence.steps[sequence.i];
+  const key = brunoAnim.key, spec = ASSET_MANIFEST[key] || ASSET_MANIFEST.bruno_idle, sc = spriteScale(key);
+  const dw = Math.round(spec.w * sc), dh = Math.round(spec.h * sc);
+  const bx = Math.round(brunoX), by = groundY - Math.round(brunoY);
+  const left = Math.round(brunoX - dw / 2), top = by - dh;
+  // sichtbare Unterkante: unterste Zeile mit deckenden Pixeln in der Sprite-Box (nur ohne Sequenz sinnvoll)
+  let feet = null;
+  if (!st && !state.brunoHidden) {
+    const img = ctx.getImageData(left * RES, top * RES, dw * RES, (dh + 4) * RES).data;
+    const w = dw * RES;
+    for (let y = (dh + 4) * RES - 1; y >= 0 && feet === null; y--) for (let x = 0; x < w; x++) if (img[(y * w + x) * 4 + 3] > 200) { feet = top + (y + 1) / RES; break; }
+  }
+  ctx.save(); ctx.lineWidth = 0.5;
+  ctx.strokeStyle = 'rgba(255,40,40,0.95)'; ctx.beginPath(); ctx.moveTo(0, groundY + 0.25); ctx.lineTo(W, groundY + 0.25); ctx.stroke();
+  ctx.strokeStyle = 'rgba(60,230,255,0.9)'; ctx.strokeRect(left + 0.25, top + 0.25, dw, dh);
+  ctx.fillStyle = '#ff40ff'; ctx.fillRect(bx - 1, by - 1, 2, 2);
+  if (feet !== null) { ctx.strokeStyle = 'rgba(255,230,40,0.95)'; ctx.beginPath(); ctx.moveTo(left - 6, feet + 0.25); ctx.lineTo(left + dw + 6, feet + 0.25); ctx.stroke(); }
+  ctx.restore();
+  Labels.set('dbg', 'feet ' + (feet === null ? '?' : (feet - groundY).toFixed(1)) + ' px  y=' + by + ' ' + key, 4, 130, { size: 5, color: '#ffe040', cls: 'flat' });
+}
+
 // One-shot placeholders so sequences are visible before real art exists
 function placeholderOneShot(key, x, bottomY, anim) {
-  if (key === 'star_flare' || key === 'star_swoop' || key === 'star_burst') { drawStarFinale(key, x, bottomY); return; }
   if (key === 'boat_sail') {
     // Fahrt: Boot und Bruno sind EINE Einheit — Bruno steht an fester lokaler
     // Position im Boot (Passagier), seine Beine verschwinden hinter der nahen

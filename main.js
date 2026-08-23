@@ -43,6 +43,8 @@ function frame(now) {
   drawCleanupBruno();                  // Bruno auf dem Besen (nur waehrend des Aufraeumflugs)
   drawParticles();
   if (off) ctx.restore();
+  if (scenes[state.scene].hud) scenes[state.scene].hud();   // festes HUD (Boss-Anzeige), ohne Shake, ueber der Welt
+  if (CONFIG.debug) drawDebugFeet();
 
   ctx.drawImage(vignette, 0, 0, W, H);       // dezente Rand-Abdunklung
 

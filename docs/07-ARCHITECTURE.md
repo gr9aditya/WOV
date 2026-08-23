@@ -57,15 +57,23 @@ Ordinary canvas text at this scale looks soft, so there are two answers, and whi
 one a piece of text uses depends on whether anything should be able to walk in
 front of it.
 
-**DOM, through `Labels`** — the level wipe sign, the guardians' meter reading and
-the closing title. Positioned in game coordinates over the canvas, carrying wipe
-clipping, fade and shake with them.
+**DOM, through `Labels`** — the level wipe sign (`setWipe`, in its own
+`#wipeLabels` layer) and the closing title. Positioned in game coordinates over
+the canvas, carrying wipe clipping, fade and shake with them.
 
-**Drawn into the canvas** — since v17, the boat numbers and the cave/swamp
-signposts use `PIXFONT` and `drawPixText()` from `pixart.js`. They moved because
-they belong to the world rather than the interface: Bruno now walks *in front of*
-the sign and its lettering, which a DOM layer sitting above the canvas can never
-do.
+**Drawn into the canvas**, using `PIXFONT` and `drawPixText()` from `pixart.js` —
+the boat numbers, the cave and swamp signposts, and the boss HUD's name and status
+value.
+
+The split is not stylistic. Text moves into the canvas when something has to be
+able to pass in front of it, which a DOM layer sitting above the canvas can never
+allow. Boat numbers and signposts moved in v17 so Bruno could walk in front of the
+signs; the guardians' status meter moved in v18 for the same reason, having been a
+world object whose DOM label drew over the top of him. It is now a fixed HUD in
+the top right, drawn after the world and deliberately exempt from screen shake.
+
+Under `?debug=1` (`CONFIG.debug`) a further readout shows the ground line, sprite
+box, measured foot edge and pivot. It is never visible in normal play.
 
 *Consequence worth knowing:* the DOM half does not appear in canvas captures. The
 explainer GIF's captions were composited separately for that reason.
@@ -174,6 +182,10 @@ run the game.
 - `darken_bruno.py` — shifts only Bruno's nine fur colours ~7% darker and warmer,
   leaving belly, eyes and outline alone. The original sheet is kept beside it as
   `assets/bruno/idle_original.png`.
+- `fix_bruno_sprite.py` — edits the idle sheet so every frame ends on the same
+  row, giving all eight a common foot anchor, and replaces the raised arms in
+  frames 2, 3 and 7 with the hanging pair from 4 and 6. This is what actually
+  fixed Bruno appearing to float: the cause was the sprite, not the drawing code.
 
 ## Third-party assets
 

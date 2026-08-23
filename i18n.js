@@ -38,7 +38,7 @@ const I18N = {
     // ---- Hotspots ----
     'hs.mailbox':'Briefkasten öffnen', 'hs.boat':'Mit Schiff {n} fahren', 'hs.altar':'Altar untersuchen',
     'hs.gate':'Muster wählen', 'hs.spider':'Spinnenhöhle betreten', 'hs.croc':'Krokodilsumpf betreten',
-    'hs.attack':'Mit dem Schwert angreifen', 'hs.confirm':'Bestätigungscode eingeben', 'hs.stars':'Sterne ansehen',
+    'hs.attack':'Mit dem Schwert angreifen', 'hs.confirm':'Bestätigungscode eingeben', 'hs.stars':'Sterne ansehen', 'hud.spider':'SPINNE', 'hud.croc':'KROKODIL',
     // ---- Symbole / Sterne ----
     'sym.moon':'Mond', 'sym.leaf':'Blatt', 'sym.triangle':'Dreieck', 'sym.star':'Stern', 'sym.sun':'Sonne', 'sym.circle':'Kreis',
     'star.gold.short':'Goldener Stern (2 Ringe)', 'star.gold.long':'Goldener Stern mit zwei Ringen',
@@ -150,7 +150,7 @@ const I18N = {
     'card.hat':'Mode privé du navigateur', 'card.hatVal':'Mettre le chapeau avant de partir',
     'hs.mailbox':'Ouvrir la boîte aux lettres', 'hs.boat':'Partir avec le bateau {n}', 'hs.altar':'Examiner l’autel',
     'hs.gate':'Choisir le motif', 'hs.spider':'Entrer dans la grotte', 'hs.croc':'Entrer dans le marais',
-    'hs.attack':'Attaquer avec l’épée', 'hs.confirm':'Saisir le code de confirmation', 'hs.stars':'Regarder les étoiles',
+    'hs.attack':'Attaquer avec l’épée', 'hs.confirm':'Saisir le code de confirmation', 'hs.stars':'Regarder les étoiles', 'hud.spider':'ARAIGNÉE', 'hud.croc':'CROCODILE',
     'sym.moon':'Lune', 'sym.leaf':'Feuille', 'sym.triangle':'Triangle', 'sym.star':'Étoile', 'sym.sun':'Soleil', 'sym.circle':'Cercle',
     'star.gold.short':'Étoile dorée (2 anneaux)', 'star.gold.long':'Étoile dorée à deux anneaux',
     'star.blue.short':'Étoile bleue (1 anneau)', 'star.blue.long':'Étoile bleue à un anneau',
@@ -257,7 +257,7 @@ const I18N = {
     'card.hat':'Modalità privata del browser', 'card.hatVal':'Mettere il cappello prima di uscire',
     'hs.mailbox':'Apri la cassetta delle lettere', 'hs.boat':'Parti con la barca {n}', 'hs.altar':'Esamina l’altare',
     'hs.gate':'Scegli il motivo', 'hs.spider':'Entra nella grotta', 'hs.croc':'Entra nella palude',
-    'hs.attack':'Attacca con la spada', 'hs.confirm':'Inserisci il codice di conferma', 'hs.stars':'Guarda le stelle',
+    'hs.attack':'Attacca con la spada', 'hs.confirm':'Inserisci il codice di conferma', 'hs.stars':'Guarda le stelle', 'hud.spider':'RAGNO', 'hud.croc':'COCCODRILLO',
     'sym.moon':'Luna', 'sym.leaf':'Foglia', 'sym.triangle':'Triangolo', 'sym.star':'Stella', 'sym.sun':'Sole', 'sym.circle':'Cerchio',
     'star.gold.short':'Stella dorata (2 anelli)', 'star.gold.long':'Stella dorata con due anelli',
     'star.blue.short':'Stella blu (1 anello)', 'star.blue.long':'Stella blu con un anello',

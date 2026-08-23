@@ -615,6 +615,9 @@ function drawSpiderScene() {
     drawPix('skull', 198, groundY + 10, -1);
     drawPix('bones', 226, groundY + 14, 1);
   }));
+  // Foto: die helle Steinkante des Bodens liegt im Bild 2 px unter groundY — die Kante wird
+  // auf die Bodenlinie gezogen (Zeilen 114/115 nach 112/113), damit Bruno sichtbar darauf steht
+  if (Assets.has('bg_spider')) staticLayer('spider_lip', () => ctx.drawImage(Assets.imgs.bg_spider, 0, groundY + 2, W, 2, 0, groundY, W, 2));
   // Gegner — immer: Spinne am Faden, Leiche bis zur Pruefung
   const spiderBusy = sequence && sequence.steps[sequence.i] && sequence.steps[sequence.i].key.indexOf('spider') === 0;
   if (!spiderBusy && state.enemyState === 'alive') {
@@ -629,31 +632,29 @@ function drawSpiderScene() {
   } else if (!spiderBusy && state.enemyState === 'dead') {
     drawCorpse('spider_defeated', 150, 1);     // liegt da, bis der Statuswert geprueft ist
   }
-  drawStatusMeter(72);
   if (state.enemyState === 'alive') hotspotMarker(150, 72);
   drawBruno(); }
 
-/* Messgeraet fuer den Statuswert (Raute = Pruefcodes): Eisenpfosten mit
-   Anzeige. Vor dem Kampf zeigt es nur Striche, danach den gemeldeten Wert
-   (state.meterValue, gesetzt in der Story). Die Raute ist in die Blende
-   eingebrannt; bei Anzeige leuchtet sie mit.                              */
-function drawStatusMeter(x) {
-  const y = groundY;
-  const on = state.enemyState !== 'alive' && state.meterValue;
-  // Pfosten + Fuss
-  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x - 2, y - 22, 4, 22); ctx.fillRect(x - 6, y - 2, 12, 2);
-  ctx.fillStyle = '#4a5261'; ctx.fillRect(x - 1, y - 21, 2, 20);
-  // Gehaeuse
-  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x - 15, y - 40, 30, 20);
-  ctx.fillStyle = '#55606f'; ctx.fillRect(x - 14, y - 39, 28, 18);
-  ctx.fillStyle = '#6c7584'; ctx.fillRect(x - 14, y - 39, 28, 1); ctx.fillStyle = '#3a4150'; ctx.fillRect(x - 14, y - 22, 28, 1);
-  // Anzeige (rechts) + eingebrannte Raute (links)
-  ctx.fillStyle = '#0c1018'; ctx.fillRect(x - 3, y - 36, 15, 12);
-  const pulse = 0.7 + Math.sin(t * 0.15) * 0.3;
-  if (on) { ctx.fillStyle = `rgba(111,224,255,${0.12 + 0.1 * pulse})`; ctx.fillRect(x - 3, y - 36, 15, 12); }
-  drawSymbol('diamond', x - 8.5, y - 30, 5.5, 'burnt', '#15120f');
-  if (on) drawSymbol('diamond', x - 8.5, y - 30, 3.2, 'glow', '#6fe0ff');
-  Labels.set('meter', on ? state.meterValue : '– – –', x + 4.5, y - 31, { align: 'center', size: 6, color: on ? '#9ff0ff' : '#4a6a78', cls: 'flat mono' });
+/* Boss-Anzeige: festes HUD oben rechts, ausserhalb von Brunos Laufbahn, ohne
+   Kollision, gezeichnet nach der Welt und ohne Shake (Hook scene.hud in main.js).
+   alive: Name + voller Balken. dead: Balken leer, dazu der Statuswert mit der
+   Raute (Pruefcode) — das ist, was der Spieler mit dem Codeblatt vergleicht.
+   verified: ausgeblendet. Das fruehere Messgeraet in der Welt ist entfernt.   */
+function drawBossHud(kind) {
+  if (state.enemyState === 'verified') return;
+  const x0 = 150, y0 = 26, w = 100, h = 16;
+  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x0 - 1, y0 - 1, w + 2, h + 2);
+  ctx.fillStyle = '#3a4150'; ctx.fillRect(x0, y0, w, h);
+  ctx.fillStyle = '#55606f'; ctx.fillRect(x0, y0, w, 1); ctx.fillRect(x0, y0, 1, h);
+  drawPixText(tr('hud.' + kind), x0 + 3, y0 + 3, '#f4e9c9', 1, 'left', '#1b1024');
+  const alive = state.enemyState === 'alive';
+  const bx = x0 + 3, by = y0 + 10, bw = w - 6;
+  ctx.fillStyle = '#0c1018'; ctx.fillRect(bx, by, bw, 3);
+  if (alive) { ctx.fillStyle = '#d64545'; ctx.fillRect(bx, by, bw, 3); ctx.fillStyle = '#f06060'; ctx.fillRect(bx, by, bw, 1); }
+  else if (state.meterValue) {
+    drawSymbol('diamond', x0 + w - 22, y0 + 5, 3.5, 'glow', '#6fe0ff');
+    drawPixText(state.meterValue, x0 + w - 3, y0 + 3, '#9ff0ff', 1, 'right', '#0c1018');
+  }
 }
 
 /* Leiche: letzter Frame der Defeated-Animation, 180 Grad um die Mitte
@@ -719,7 +720,6 @@ function drawCrocScene() {
   } else if (!crocBusy && state.enemyState === 'dead') {
     drawCorpse('croc_defeated', 150, 1);
   }
-  drawStatusMeter(72);
   if (state.enemyState === 'alive') hotspotMarker(150, 72);
   drawBruno(); }
 
@@ -824,9 +824,93 @@ function towerConsole(near, red) {
   runeGlyph(x, y - 6, col, Math.min(1, k + (red > 0 ? red * 0.5 : 0)), RUNE_GLYPHS[6]);
   if (near || red > 0) runeHalo(x, y - 13, col, k, 9);
 }
+/* ===================== Burgtor im Turm (Eingang) =====================
+   Klassischer Burgeingang in reiner Seitenansicht um den Turmbogen: kraeftige
+   Pfeiler aus grossen blaugrauen Quadern, Rundbogen aus Keilsteinen mit
+   Schlussstein, dunkle Fugen, Risse und verwitterte Kanten (statisch, einmal in
+   eine Ebene gerastert, Pixel fuer Pixel). Darin das dunkle doppelfluegelige
+   Holztor mit Eisenbaendern, Scharnieren, Nieten und Mittelspalt: linker
+   Fluegel geht nach links, rechter nach rechts auf — gleicher Fortschritt
+   openK, ganzzahlige Breiten, nichts wird skaliert. Dahinter der dunkle
+   Durchgang mit dem Galaxy-Portal. Die neun Bogenrunen (TOWER_RUNES 'arch')
+   liegen in den Keilsteinen und leuchten wie bisher (violett/cyan).
+   Logik, Codeeingabe und Uebergang (gate_open -> doorWalk) unveraendert.      */
+const GATE_PIER = 10, GATE_RING = 9;
+function castleStone() {
+  const x0 = ARCH.x0, x1 = ARCH.x1, cx = ARCH.cx, cy = ARCH.top + ARCH.r, r = ARCH.r;
+  const base = '#6b7686', light = '#8793a3', dark = '#4b5563', mortar = '#262c36', crack = '#3a4150';
+  // Pfeiler: grosse Quader, Reihen versetzt, Licht oben/links, Schatten unten/rechts
+  const pier = (px) => {
+    ctx.fillStyle = mortar; ctx.fillRect(px, cy - 2, GATE_PIER, groundY + 2 - (cy - 2));
+    let row = 0;
+    for (let y = cy - 2; y < groundY + 2; y += 7, row++) {
+      const h = Math.min(6, groundY + 2 - y - 1);
+      const split = row % 2 ? 4 : 6;
+      for (const [bx, bw] of [[px, split], [px + split + 1, GATE_PIER - split - 1]]) {
+        ctx.fillStyle = base; ctx.fillRect(bx, y, bw, h);
+        ctx.fillStyle = light; ctx.fillRect(bx, y, bw, 1); ctx.fillRect(bx, y, 1, h);
+        ctx.fillStyle = dark; ctx.fillRect(bx, y + h - 1, bw, 1); ctx.fillRect(bx + bw - 1, y, 1, h);
+      }
+    }
+  };
+  pier(x0 - GATE_PIER); pier(x1);
+  // Bogenring aus Keilsteinen: Pixel fuer Pixel (Radius r..r+GATE_RING, 9 Keile, Fugen dazwischen)
+  for (let y = cy - r - GATE_RING - 3; y <= cy; y++) for (let x = cx - r - GATE_RING - 1; x <= cx + r + GATE_RING + 1; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.sqrt(dx * dx + dy * dy);
+    if (dy > 0 || d < r || d > r + GATE_RING) continue;
+    const a = Math.atan2(-dy, dx) / Math.PI;               // 0 rechts .. 1 links
+    const seg = a * 9, k = seg - Math.floor(seg);
+    let col = base;
+    if (k < 0.09 || k > 0.91 || d < r + 1 || d > r + GATE_RING - 1) col = mortar;
+    else if (d < r + 2.2 || k < 0.2) col = light;
+    else if (d > r + GATE_RING - 2.2 || k > 0.8) col = dark;
+    if (((x * 31 + y * 17) % 23) === 0 && col === base) col = crack;   // Verwitterung
+    ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1);
+  }
+  // Schlussstein: ragt 3 px ueber den Ring
+  ctx.fillStyle = mortar; ctx.fillRect(cx - 5, cy - r - GATE_RING - 3, 10, 6);
+  ctx.fillStyle = light; ctx.fillRect(cx - 4, cy - r - GATE_RING - 2, 8, 4);
+  ctx.fillStyle = base; ctx.fillRect(cx - 3, cy - r - GATE_RING - 1, 6, 3);
+  // Risse
+  ctx.fillStyle = crack;
+  for (const [sx, sy, n] of [[x0 - 7, cy + 10, 5], [x1 + 4, cy + 22, 6], [cx - 9, cy - r - 5, 4]]) for (let i = 0; i < n; i++) ctx.fillRect(sx + (i % 2), sy + i, 1, 1);
+  // Schwelle + Schatten unter dem Bogen
+  ctx.fillStyle = dark; ctx.fillRect(x0 - 3, groundY, x1 - x0 + 6, 2); ctx.fillStyle = mortar; ctx.fillRect(x0 - 3, groundY + 2, x1 - x0 + 6, 1);
+}
+function castleDoors(openK, red) {
+  const x0 = ARCH.x0, x1 = ARCH.x1, top = ARCH.top, base = groundY;
+  const half = (x1 - x0) / 2, lw = Math.round(half * (1 - openK));
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, top + ARCH.r, x1 - x0, base - top - ARCH.r); ctx.arc(ARCH.cx, top + ARCH.r, ARCH.r, Math.PI, 0); ctx.clip();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x0, top, x1 - x0, 5);           // Schatten unter dem Bogen
+  if (lw > 0) {
+    const leaf = (lx, dir) => {
+      ctx.fillStyle = '#1b1024'; ctx.fillRect(lx, top, lw, base - top);
+      ctx.fillStyle = '#3a2416'; ctx.fillRect(lx + (dir > 0 ? 1 : 0), top + 1, Math.max(0, lw - 1), base - top - 1);
+      ctx.fillStyle = '#2a1810'; for (let px = 3; px < lw - 1; px += 4) ctx.fillRect(lx + px, top, 1, base - top);     // Planken
+      ctx.fillStyle = '#4a3020'; for (let px = 1; px < lw - 1; px += 4) ctx.fillRect(lx + px, top + 1, 1, base - top - 1);
+      for (const py of [top + 13, top + 25, top + 37]) {                                                               // Eisenbaender
+        ctx.fillStyle = '#2f2f36'; ctx.fillRect(lx, py, lw, 3); ctx.fillStyle = '#55555e'; ctx.fillRect(lx, py, lw, 1);
+        ctx.fillStyle = '#8a8a96'; for (let px = 2; px < lw - 1; px += 4) ctx.fillRect(lx + px, py + 1, 1, 1);           // Nieten
+        const hx = dir > 0 ? lx : lx + lw - 2;                                                                         // Scharnier aussen
+        ctx.fillStyle = '#1b1e28'; ctx.fillRect(hx, py - 1, 2, 5); ctx.fillStyle = '#6a6a78'; ctx.fillRect(hx, py, 2, 3);
+      }
+      if (lw > 5) { const rx = dir > 0 ? lx + lw - 4 : lx + 2; ctx.fillStyle = '#8a8a96'; ctx.fillRect(rx, base - 22, 2, 3); ctx.fillStyle = '#1b1e28'; ctx.fillRect(rx, base - 21, 2, 1); }   // Ring
+    };
+    leaf(x0, 1); leaf(x1 - lw, -1);
+    if (openK < 0.02) { ctx.fillStyle = '#0c0a12'; ctx.fillRect(ARCH.cx - 1, top + 1, 1, base - top - 1); }         // Spalt
+    if (red > 0) { ctx.fillStyle = `rgba(255,60,60,${0.18 * red})`; ctx.fillRect(x0, top, x1 - x0, base - top); }
+  }
+  ctx.restore();
+}
+function drawCastleGate(openK, red) {
+  drawPortal(openK, red);                  // dunkler Durchgang mit Portal — hinter den Fluegeln
+  castleDoors(openK, red);
+  staticLayer('castle_stone', castleStone);
+}
 /* Steintafel ueber dem Turmbogen mit grossem eingemeisseltem Fuenfeck */
 function towerPlaque(red) {
-  const cx = ARCH.cx, cy = ARCH.top - 16;
+  const cx = ARCH.cx, cy = ARCH.top - 26;
   ctx.fillStyle = '#1b1e28'; ctx.fillRect(cx - 13, cy - 11, 26, 22);
   ctx.fillStyle = '#6c7584'; ctx.fillRect(cx - 12, cy - 10, 24, 20);
   ctx.fillStyle = '#5b6472'; ctx.fillRect(cx - 11, cy - 9, 22, 18);
@@ -885,8 +969,8 @@ function drawConfirmGateScene() {
   for (const [wx, wy, ph] of [[TOWER_OX + 58, TOWER_OY + 18, 0], [TOWER_OX + 98, TOWER_OY + 54, 2]]) {
     ctx.fillStyle = `rgba(170,140,240,${0.25 + Math.sin(t * 0.07 + ph) * 0.08 + Math.sin(t * 0.23 + ph) * 0.05})`; ctx.fillRect(wx - 1, wy, 4, 11);
   }
-  // Portal + Tafel + Konsole
-  drawPortal(openK, red);
+  // Burgtor (Steinbogen, Holzfluegel, dahinter das Portal) + Tafel + Konsole
+  drawCastleGate(openK, red);
   towerPlaque(red);
   const near = Math.abs(brunoX - TOWER_X) < CONFIG.interactRange && ui.mode === null;
   towerConsole(near || opening || ui.mode === 'panel', red);
@@ -924,9 +1008,21 @@ function drawStarsScene() {
 // Raum hellt sich auf, je naeher Bruno der Wahl kommt
 const nearK = 1 - Math.min(1, Math.abs(brunoX - 128) / 100);
 STARS.forEach((s_,i)=>{
-  if (state.starTaken === i) return;                 // gewaehlt: zeichnet die Sequenz / ist zerbrochen
+  if (state.starTaken === i && (state.starCollected || s_.id !== CODEBLATT.finalStar)) return;   // eingesammelt / zerbrochen
   const bob=Math.sin(t*0.06+i*1.4)*4, cy=STAR_Y+bob;
   const pulse = 1 + Math.sin(t*0.12 + i*1.7) * 0.12;
+  // richtiger Stern waehrend des Sprungs: kurz heller, beim Erreichen in Pixelpartikel aufloesen
+  const jst = sequence && sequence.steps[sequence.i];
+  if (state.starTaken === i && jst && jst.fx === 'jump') {
+    const p = seqProgress(jst);
+    if (p >= 0.5 && !state.starCollected) {
+      state.starCollected = true; state.starCollectT = t;
+      burst(s_.x, cy, 26, { spread: 70, up: 50, g: 40, life: 0.6, color: [s_.c, '#ffffff', s_.c], size: 2 });
+      Sfx.play('star');
+    }
+    if (!state.starCollected) { drawPix('star', s_.x, Math.round(cy) + 6, 1, { ch:'s', color:s_.c }); drawPixTint('star', s_.x, Math.round(cy) + 6, '#ffffff', Math.min(0.8, p * 1.6)); }
+    return;
+  }
   // farbiger Lichtschein auf dem Boden
   ctx.fillStyle = hexA(s_.c, 0.10 + 0.12*nearK + Math.sin(t*0.12+i*1.7)*0.03);
   ctx.beginPath(); ctx.ellipse(s_.x, groundY+1, 22, 5, 0, 0, Math.PI*2); ctx.fill();
@@ -946,7 +1042,14 @@ STARS.forEach((s_,i)=>{
 });
 if (nearK > 0) { ctx.fillStyle = `rgba(255,236,180,${0.16*nearK})`; ctx.fillRect(0,0,W,H); }
 // der gewonnene Stern schwebt ueber Bruno (nach der Sequenz, vor dem Abgang)
-if (state.starTaken >= 0 && STARS[state.starTaken].id === CODEBLATT.finalStar && !sequence && !state.brunoHidden) drawWonStar(brunoX, groundY-40+Math.sin(t*0.05)*3, 0.6, STARS[state.starTaken].c);
+// Lichtimpuls beim Einsammeln: ein Ring aus Pixeln, der 0.3 s lang waechst (ganzzahlig)
+if (state.starCollected && state.starCollectT >= 0 && t - state.starCollectT < 18) {
+  const k = (t - state.starCollectT) / 18, st_ = STARS[state.starTaken], r = Math.round(4 + k * 14);
+  ctx.fillStyle = hexA(st_.c, 1 - k);
+  for (let a = 0; a < 16; a++) ctx.fillRect(Math.round(st_.x + Math.cos(a * Math.PI / 8) * r), Math.round(STAR_Y + Math.sin(a * Math.PI / 8) * r), 1, 1);
+}
+// der eingesammelte Stern schwebt ueber Bruno (nach der Landung, bis zum Abgang)
+if (state.starCollected && !sequence && !state.brunoHidden) drawWonStar(brunoX, groundY - Math.round(40 * CHAR_SCALE) + Math.sin(t*0.05)*3, 0.6, STARS[state.starTaken].c);
 drawStarMedallion(40);
 hotspotMarker(40); drawBruno(); }
 
@@ -987,43 +1090,6 @@ function drawWonStar(x, y, k, color) {
   for (let r=0;r<Math.max(1, st.rings);r++){ ctx.beginPath(); ctx.ellipse(x,y,8+r*3,3+r,t*0.04*(r%2?-1:1),0,Math.PI*2); ctx.stroke(); }
   drawPix('star', Math.round(x), Math.round(y) + 6, 1, { ch:'s', color:c });
 }
-/* Finale-Schritte (Keys star_flare / star_swoop / star_burst, keine Sheets) */
-function drawStarFinale(key, x, y) {
-  const step = sequence.steps[sequence.i];
-  const p = seqProgress(step);
-  const st = STARS[state.starTaken] || STARS[0];
-  const fxOn = Prefs.data.shake;
-  if (key === 'star_flare') {
-    // Zeit steht fast still, der Stern flammt weiss auf
-    ctx.fillStyle = `rgba(255,255,255,${0.35*p})`; ctx.beginPath(); ctx.arc(x, y, 14 + p*26, 0, Math.PI*2); ctx.fill();
-    rays(x, y, 8, 10 + p*34, `rgba(255,250,220,${0.7*p})`, p*1.2);
-    drawStarShape(x, y, mixHex(st.c, '#ffffff', p), 1 + p*1.4);
-  } else if (key === 'star_swoop') {
-    // Sturzflug zu Bruno mit Lichtschweif (Partikel, gedeckelt)
-    const e = p*p;
-    const px = x + (step.toX - x) * e;
-    const py = y + (step.toY - y) * e - Math.sin(p*Math.PI) * 22;
-    spawnParticle(px, py, { spread: 24, up: 12, g: 0, life: 0.35, color: ['#ffffff','#ffd23f','#ffe999'], size: 2 });
-    spawnParticle(px, py, { spread: 34, up: 24, g: 0, life: 0.5, color: ['#ffd23f','#fff6cc'] });
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.fill();
-    drawStarShape(px, py, '#ffffff', 2.2 - p*0.8);
-    drawStarShape(px, py, st.c, 1.6 - p*0.6);
-  } else if (key === 'star_burst') {
-    // Stern ueber Bruno, Schockwelle ueber den ganzen Schirm, Blitz
-    const q = 1 - p;
-    if (fxOn) {
-      ctx.strokeStyle = `rgba(255,240,200,${q})`; ctx.lineWidth = 1 + 3*q;
-      ctx.beginPath(); ctx.arc(x, y, 6 + p*250, 0, Math.PI*2); ctx.stroke();
-      ctx.strokeStyle = `rgba(255,210,63,${q*0.6})`; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(x, y, 6 + p*180, 0, Math.PI*2); ctx.stroke();
-    }
-    rays(x, y, 12, 14 + Math.sin(p*Math.PI)*30, `rgba(255,250,220,${0.5*q})`, t*0.03);
-    ctx.fillStyle = `rgba(255,255,255,${0.35*q})`; ctx.beginPath(); ctx.arc(x, y, 10 + q*16, 0, Math.PI*2); ctx.fill();
-    drawStarShape(x, y, st.c, 1.5 + Math.sin(p*Math.PI)*0.5);
-    if (fxOn && p < 0.5) { ctx.fillStyle = `rgba(255,255,255,${0.85*Math.pow(1 - p*2, 2)})`; ctx.fillRect(-8, -8, W+16, H+16); }
-  }
-}
-
 function drawEndScene() {
   // Foto: alpen.png wie Level 1, aber mit warmem Abendlicht (Verlauf + Sonne) als Sieges-Stimmung
   const photo = bgOrElse('bg_end', () => {

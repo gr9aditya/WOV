@@ -303,7 +303,7 @@ function drawSequence() {
   if (!sequence) return;
   const step = sequence.steps[sequence.i];
   if (!step) return;
-  const f = sequence.anim.frame;
+  const f = step.frame !== undefined ? step.frame : sequence.anim.frame;   // step.frame: Pose halten (Sprung)
   const spec = ASSET_MANIFEST[step.key] || { frames:1, w:32, h:32 };
   const p = seqProgress(step);
   const sx = seqX(step, p);
@@ -355,15 +355,10 @@ function drawSequence() {
       ctx.beginPath(); ctx.rect(0, 0, W, by + 2); ctx.clip();
       ctx.translate(sx, by); ctx.rotate(Math.sin(p * 14) * 0.12 * (1 - p)); ctx.translate(-sx, -by + sink);
       if (p > 0.3 && pRand() < 0.35) spawnParticle(sx + (pRand() - 0.5) * 10, by - 2, { up: 30, g: -40, life: 0.7, color: ['#d6f2ff', '#ffffff'] });
-    } else if (fx === 'flyout') {
-      // vom Stern emporgehoben: Bogen nach oben rechts, kleiner werdend, Stern ueber dem Kopf, Funkenspur
-      const e = p * p;
-      const dy = -e * 150 - Math.sin(p * Math.PI) * 10;
-      const sc = 1 - 0.45 * e;
-      ctx.translate(sx, by + dy); ctx.scale(sc, sc); ctx.translate(-sx, -by);
-      const sc2 = (typeof CODEBLATT !== 'undefined') ? starById(CODEBLATT.finalStar).c : '#ffd23f';
-      drawWonStar(sx, by - 38 + Math.sin(t * 0.2) * 2, 0.9, sc2);
-      if (pRand() < 0.6) spawnParticle(sx + (pRand() - 0.5) * 16, by + dy - 20, { spread: 20, up: 10, g: 30, life: 0.6, color: [sc2, '#ffffff', '#ffe999'] });
+    } else if (fx === 'jump') {
+      // kontrollierter Sprung an Ort und Stelle: Parabel (Sinus) bis step.jumpH, ganzzahlig,
+      // Bruno landet exakt wieder auf bottomY (p = 1 -> Versatz 0)
+      ctx.translate(0, -Math.round(Math.sin(p * Math.PI) * (step.jumpH || 24)));
     } else if (fx === 'enter') {
       // durchs Tor: ab 55 % des Wegs kleiner und blasser werden
       const q = Math.max(0, (p - 0.55) / 0.45);
@@ -385,7 +380,7 @@ function drawSequence() {
   if (!drawSprite(step.key, f, sx, by, facing)) {
     placeholderOneShot(step.key, sx, by, sequence.anim);
   }
-  // Hut im selben Transform wie der Sprite (rotiert/blendet bei death/defeat/drown/flyout mit)
+  // Hut im selben Transform wie der Sprite (rotiert/blendet bei death/defeat/drown/jump mit)
   if (isBruno) drawHat(sx, by, facing, step.key, f);
 
   // Schwert vor Bruno (Hieb, hochgehalten)

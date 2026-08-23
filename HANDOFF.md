@@ -413,6 +413,37 @@ Felder bekommen.
 * Nicht geändert: Logik, Reihenfolge, Codewerte, Audio, Texte (ausser Knopf/Fortschritt).
   Level 5 (Weggabelung): nur das Wegweiser-Schild (Abschnitt 10.3 des Auftrags).
 
+### Sechzehnter Durchgang (letzte Korrekturen: Boden, Arme, Burgtor, Boss-HUD, Sternensammeln)
+
+* **Boden**: Ursache des „Schwebens" war das Sprite selbst — im Idle stand nur die
+  vordere Fussspitze (4 px) in der untersten Zeile 29, der hintere Fuss endete in
+  Zeile 28; dazu beginnt die helle Steinkante des Höhlen-Fotos erst 2 px unter
+  `groundY`. Fix: `tools/fix_bruno_sprite.py` zieht den hinteren Fuss in Frame 0/1
+  bis Zeile 29 (alle 8 Frames enden jetzt in Zeile 29 = gemeinsamer Fussanker,
+  `padBottom` 2), `drawSprite` setzt diese Zeile auf Gerätepixel genau auf
+  `groundY`; in der Höhle wird die Fotokante auf die Bodenlinie gezogen
+  (`spider_lip`). Debug-Ansicht mit `?debug=1` (Bodenlinie, Sprite-Box, gemessene
+  Fusskante, Pivot) — in Produktion nie sichtbar.
+* **Arme**: Frame 2 (beide Arme auf Schulterhöhe) und 3/7 (seitlich abgespreizt)
+  bekommen die hängenden Arme aus Frame 4/6, Frame 3/7 mit 1 px Gegenschwung.
+  Beine, Körper, Frame-Anzahl unverändert (gleiches Script).
+* **Burgtor im Turm** (`drawCastleGate`, `castleStone`, `castleDoors`): Pfeiler aus
+  grossen blaugrauen Quadern, Keilsteinbogen mit Schlussstein, Fugen, Risse,
+  Schwelle; doppelflügeliges Holztor mit Eisenbändern, Scharnieren, Nieten und
+  Mittelspalt — linker Flügel nach links, rechter nach rechts, ganzzahlige Breiten.
+  Dahinter der dunkle Durchgang mit dem Galaxy-Portal. Bogenrunen liegen in den
+  Keilsteinen. Logik unverändert. (Das Baumtor in Level 4 bleibt wie beauftragt.)
+* **Boss-HUD** (`drawBossHud`, Hook `scene.hud` in main.js, ohne Shake): das
+  Messgerät als Weltobjekt (mit DOM-Label, das über Bruno lag) ist entfernt; die
+  Anzeige sitzt fest oben rechts (x 150..250, y 26..42): Name + Balken solange
+  der Boss lebt, danach Raute + Statuswert, nach der Prüfung ausgeblendet.
+* **Sternensammeln** (`starFinale`): Laufen zum Sammelpunkt (8 px vor dem Stern,
+  normale Geschwindigkeit `CONFIG.walkSpeed`), kurzer Halt, Sprung (fx `jump`,
+  0.6 s, Scheitel so, dass der Oberkörper den Stern erreicht), Einsammeln bei 50 %
+  des Sprungs (Partikel + Pixel-Lichtring in der Sternfarbe, `state.starCollected`),
+  Landung, dann erst Dialog/Lernkarte/Endszene. `flyout`, `star_flare/swoop/burst`
+  und `drawStarFinale` sind entfernt; der eingesammelte Stern schwebt über Bruno.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

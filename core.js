@@ -41,6 +41,7 @@ const CONFIG = {
   particleMax: 220,     // hartes Limit, damit nichts unbegrenzt wachsen kann
   musicVolume: 0.3,     // Grundlautstaerke der Musik (Audio-Elemente), bewusst leise
   musicFade: 0.8,       // s — Ueberblendung bei echtem Trackwechsel
+  debug: /[?&]debug=1/.test(location.search),   // ?debug=1: Bodenlinie, Sprite-Box, Fusskante, Pivot einblenden (nie in Produktion)
   charScale: 1.2,       // Figuren-Massstab: Bruno +20 %; Schwert, Hut, Spinne, Krokodil haengen daran (spriteScale)
   wipeTime: 0.35,       // s — Level-Wipe rein bzw. raus
   holdTime: 0.5,        // s — Level-Schild steht
