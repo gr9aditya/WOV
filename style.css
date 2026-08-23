@@ -188,7 +188,19 @@ input[type=text]:focus { outline: 2px solid #ad8a2a; outline-offset: 1px; }
   margin: 0 0 10px 0; font-size: 22px; letter-spacing: 1px;
   border-bottom: 2px solid #1b1024; padding-bottom: 6px;
 }
-#codeblattCard .entry { margin-bottom: 8px; }
+#codeblattCard .entry { margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+#codeblattCard .entry .ebody { flex: 1; min-width: 0; }
+#codeblattCard .csym { flex: 0 0 34px; width: 34px; display: flex; justify-content: center; align-items: center; }
+/* Symbole des Stimmrechtsausweises: schwarz gefuellt, ohne Rahmen; Groesse je nach Ort */
+img.codesym { image-rendering: auto; vertical-align: middle; }
+img.codesym.card { width: 28px; height: 28px; }
+img.codesym.dlg { width: 34px; height: 34px; flex: 0 0 34px; margin-top: 2px; }
+img.codesym.inbtn { width: 16px; height: 16px; margin-right: 8px; padding-right: 8px; border-right: 1px solid rgba(255,255,255,0.35); box-sizing: content-box; }
+img.codesym.tag { width: 18px; height: 18px; margin-right: 6px; }
+img.codesym.tbl { width: 14px; height: 14px; margin-right: 6px; }
+.panel .linewrap { display: flex; align-items: flex-start; gap: 10px; }
+.panel .linewrap .line { flex: 1; min-width: 0; }
+.lbl.mono { font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
 #codeblattCard .entry b { display: block; font-size: 15px; text-transform: uppercase; opacity: 0.7; }
 #codeblattCard .val { font-size: 24px; font-weight: bold; }
 #codeblattCard .btnrow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }

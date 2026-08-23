@@ -532,8 +532,32 @@ function drawSpiderScene() {
   } else if (!spiderBusy && state.enemyState === 'dead') {
     drawCorpse('spider_defeated', 150, 1);     // liegt da, bis der Statuswert geprueft ist
   }
+  drawStatusMeter(72);
   if (state.enemyState === 'alive') hotspotMarker(150, 72);
   drawBruno(); }
+
+/* Messgeraet fuer den Statuswert (Raute = Pruefcodes): Eisenpfosten mit
+   Anzeige. Vor dem Kampf zeigt es nur Striche, danach den gemeldeten Wert
+   (state.meterValue, gesetzt in der Story). Die Raute ist in die Blende
+   eingebrannt; bei Anzeige leuchtet sie mit.                              */
+function drawStatusMeter(x) {
+  const y = groundY;
+  const on = state.enemyState !== 'alive' && state.meterValue;
+  // Pfosten + Fuss
+  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x - 2, y - 22, 4, 22); ctx.fillRect(x - 6, y - 2, 12, 2);
+  ctx.fillStyle = '#4a5261'; ctx.fillRect(x - 1, y - 21, 2, 20);
+  // Gehaeuse
+  ctx.fillStyle = '#1b1e28'; ctx.fillRect(x - 15, y - 40, 30, 20);
+  ctx.fillStyle = '#55606f'; ctx.fillRect(x - 14, y - 39, 28, 18);
+  ctx.fillStyle = '#6c7584'; ctx.fillRect(x - 14, y - 39, 28, 1); ctx.fillStyle = '#3a4150'; ctx.fillRect(x - 14, y - 22, 28, 1);
+  // Anzeige (rechts) + eingebrannte Raute (links)
+  ctx.fillStyle = '#0c1018'; ctx.fillRect(x - 3, y - 36, 15, 12);
+  const pulse = 0.7 + Math.sin(t * 0.15) * 0.3;
+  if (on) { ctx.fillStyle = `rgba(111,224,255,${0.12 + 0.1 * pulse})`; ctx.fillRect(x - 3, y - 36, 15, 12); }
+  drawSymbol('diamond', x - 8.5, y - 30, 5.5, 'burnt', '#15120f');
+  if (on) drawSymbol('diamond', x - 8.5, y - 30, 3.2, 'glow', '#6fe0ff');
+  Labels.set('meter', on ? state.meterValue : '– – –', x + 4.5, y - 31, { align: 'center', size: 6, color: on ? '#9ff0ff' : '#4a6a78', cls: 'flat mono' });
+}
 
 /* Leiche: letzter Frame der Defeated-Animation, 180 Grad um die Mitte
    gedreht (Bauch nach oben) und entsaettigt — exakt die Endlage des
@@ -598,6 +622,7 @@ function drawCrocScene() {
   } else if (!crocBusy && state.enemyState === 'dead') {
     drawCorpse('croc_defeated', 150, 1);
   }
+  drawStatusMeter(72);
   if (state.enemyState === 'alive') hotspotMarker(150, 72);
   drawBruno(); }
 
@@ -674,8 +699,22 @@ function towerConsole(near, red) {
   ctx.fillStyle = '#2b2f3a'; ctx.fillRect(x - 4, y - 21, 8, 16);
   const k = near ? 0.75 + Math.sin(t * 0.2) * 0.25 : 0.18 + Math.sin(t * 0.03) * 0.06;
   const col = red > 0 ? '#ff4a4a' : '#6fe0ff';
-  for (let i = 0; i < 3; i++) runeGlyph(x - 2 + (i % 2) * 4, y - 19 + i * 5, col, Math.min(1, k + (red > 0 ? red * 0.5 : 0)), RUNE_GLYPHS[(i + 5) % RUNE_GLYPHS.length]);
-  if (near || red > 0) runeHalo(x, y - 12, col, k, 9);
+  // eingemeisseltes Fuenfeck (Bestaetigungscode), leuchtet wenn Bruno davor steht
+  drawSymbol('pentagon', x, y - 15, 4.2, 'carved', '#14161e');
+  ctx.globalAlpha = Math.min(1, k + (red > 0 ? red * 0.5 : 0));
+  drawSymbol('pentagon', x, y - 15, 3.2, 'glow', col);
+  ctx.globalAlpha = 1;
+  runeGlyph(x, y - 6, col, Math.min(1, k + (red > 0 ? red * 0.5 : 0)), RUNE_GLYPHS[6]);
+  if (near || red > 0) runeHalo(x, y - 13, col, k, 9);
+}
+/* Steintafel ueber dem Turmbogen mit grossem eingemeisseltem Fuenfeck */
+function towerPlaque(red) {
+  const cx = ARCH.cx, cy = ARCH.top - 16;
+  ctx.fillStyle = '#1b1e28'; ctx.fillRect(cx - 13, cy - 11, 26, 22);
+  ctx.fillStyle = '#6c7584'; ctx.fillRect(cx - 12, cy - 10, 24, 20);
+  ctx.fillStyle = '#5b6472'; ctx.fillRect(cx - 11, cy - 9, 22, 18);
+  ctx.fillStyle = '#4a5261'; ctx.fillRect(cx - 11, cy + 8, 22, 1); ctx.fillRect(cx + 10, cy - 9, 1, 18);
+  drawSymbol('pentagon', cx, cy + 0.5, 8, 'carved', red > 0 ? '#4a1616' : '#1c1e26');
 }
 function drawConfirmGateScene() {
   const photo = bgOrElse('bg_confirmgate', () => {
@@ -729,8 +768,9 @@ function drawConfirmGateScene() {
   for (const [wx, wy, ph] of [[TOWER_OX + 58, TOWER_OY + 18, 0], [TOWER_OX + 98, TOWER_OY + 54, 2]]) {
     ctx.fillStyle = `rgba(170,140,240,${0.25 + Math.sin(t * 0.07 + ph) * 0.08 + Math.sin(t * 0.23 + ph) * 0.05})`; ctx.fillRect(wx - 1, wy, 4, 11);
   }
-  // Tor + Konsole
+  // Tor + Tafel + Konsole
   towerDoor(openK, red);
+  towerPlaque(red);
   const near = Math.abs(brunoX - TOWER_X) < CONFIG.interactRange && ui.mode === null;
   towerConsole(near || opening || ui.mode === 'panel', red);
   // Runen: Halo zuerst, dann Glyphen (langsam, unregelmaessig pulsierend)
@@ -790,17 +830,22 @@ STARS.forEach((s_,i)=>{
 if (nearK > 0) { ctx.fillStyle = `rgba(255,236,180,${0.16*nearK})`; ctx.fillRect(0,0,W,H); }
 // der gewonnene Stern schwebt ueber Bruno (nach der Sequenz, vor dem Abgang)
 if (state.starTaken >= 0 && STARS[state.starTaken].id === CODEBLATT.finalStar && !sequence && !state.brunoHidden) drawWonStar(brunoX, groundY-40+Math.sin(t*0.05)*3, 0.6, STARS[state.starTaken].c);
+drawStarMedallion(40);
 hotspotMarker(40); drawBruno(); }
 
-// Vierzack-Stern, scale 1 = 14 px
+// Fuenfzackiger Stern (gleiche Form wie das Finalisierungs-Symbol), scale 1 = 14 px
 function drawStarShape(x, y, color, sc) {
   sc = sc || 1;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x, y-7*sc); ctx.lineTo(x+2*sc, y-2*sc); ctx.lineTo(x+7*sc, y);
-  ctx.lineTo(x+2*sc, y+2*sc); ctx.lineTo(x, y+7*sc); ctx.lineTo(x-2*sc, y+2*sc);
-  ctx.lineTo(x-7*sc, y); ctx.lineTo(x-2*sc, y-2*sc); ctx.closePath(); ctx.fill();
+  drawSymbol('star', x, y + 0.6 * sc, 7 * sc, 'flat', color);
   ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(x-1, y-2*sc, 2, 2);
+}
+// Bodenmedaillon mit eingemeisseltem Stern vor der Sternwahl
+function drawStarMedallion(x) {
+  ctx.fillStyle = '#2a2a33'; ctx.beginPath(); ctx.ellipse(x, groundY + 7, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4a4a55'; ctx.beginPath(); ctx.ellipse(x, groundY + 6, 15, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.translate(x, groundY + 6); ctx.scale(1, 0.55);
+  drawSymbol('star', 0, 0.5, 9, 'carved', '#1a1a22');
+  ctx.restore();
 }
 function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 function mixHex(h1, h2, k) {

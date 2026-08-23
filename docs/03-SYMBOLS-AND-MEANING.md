@@ -154,6 +154,41 @@ beginning. Real verification has no lives; you check, or you do not. Punishing
 mistakes with lost progress teaches risk-aversion, and a player afraid to
 experiment never discovers that the status value lies.
 
+## The four code shapes
+
+The objects above are *things in the world*. Cutting across them is a second,
+stricter layer: each of the four codes has a fixed geometric shape, matching the
+way the real voting card marks them.
+
+| Shape | Code |
+|---|---|
+| **Triangle** | Initialisation code — the pattern |
+| **Diamond** | Choice Return Codes — the status value |
+| **Pentagon** | Confirmation code |
+| **Star** | Finalisation code |
+
+Plain black fills, no frames, no colour, so they read at any size and survive
+being carved into stone or burnt into wood.
+
+The point is that **the same shape appears everywhere that code appears** — on the
+code sheet, in the world, and in the interface. The triangle is in the keystone
+above the first gate, on the pattern-choice buttons, and beside the dialogue that
+asks for it. The diamond is on the guardians' measuring device and on all four
+check rows on the back of the sheet. The pentagon is on the rune console and on
+the stone plaque above the tower arch. The star is every star in the star chamber,
+plus the medallion on the floor before the choice.
+
+That repetition is doing the teaching. A player who has seen the diamond on the
+meter, on the sheet and on the learn card has been told three times, without a
+word, that these are the same thing.
+
+**Why it is one canvas path and not a sprite** — `symbolPath()` in `pixart.js`,
+drawn through `drawSymbol()` in the styles `flat`, `carved`, `burnt` and `glow`.
+The interface icons come from that same path as a data URI, so the shape is
+identical at every size with no stair-stepping, and there is no image file that
+can fall out of step with the code. Same reasoning as the code sheet itself: one
+source of truth, and no way to end up with two.
+
 ## The symbol test
 
 Before adding one, three questions:

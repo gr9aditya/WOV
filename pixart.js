@@ -264,6 +264,66 @@ function symImg(id, cls) {
   return `<img class="sym ${cls || ''}" alt="${id}" src="${pixIcon('sym_' + id, 4)}">`;
 }
 
+/* ---------- Die vier Symbole des Stimmrechtsausweises ----------
+   Feste Zuordnung (Spiel-Schritt -> Form), wie auf dem echten Ausweis:
+     pattern = Dreieck  (Initialisierungscode)
+     status  = Raute    (Pruefcodes)
+     confirm = Fuenfeck (Bestaetigungscode)
+     star    = Stern    (Finalisierungscode)
+   Als Canvas-Pfad, nicht als Sprite: derselbe Pfad laeuft klein auf dem
+   Codeblatt (Icon via Data-URI) und gross in der Welt (eingemeisselt /
+   eingebrannt / leuchtend), ohne Treppen beim Skalieren.                 */
+const CODE_SYMBOLS = { pattern: 'triangle', status: 'diamond', confirm: 'pentagon', star: 'star' };
+function symbolPath(kind, cx, cy, r) {
+  ctx.beginPath();
+  const go = (i, a, rr) => { const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); };
+  if (kind === 'triangle')      for (let i = 0; i < 3; i++) go(i, -Math.PI / 2 + i * 2 * Math.PI / 3, r);
+  else if (kind === 'diamond')  { ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.78, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.78, cy); }
+  else if (kind === 'pentagon') for (let i = 0; i < 5; i++) go(i, -Math.PI / 2 + i * 2 * Math.PI / 5, r);
+  else                          for (let i = 0; i < 10; i++) go(i, -Math.PI / 2 + i * Math.PI / 5, i % 2 ? r * 0.42 : r);
+  ctx.closePath();
+}
+/* drawSymbol(kind, cx, cy, r, style, color)
+   'flat'   : schwarz ausgefuellt, ohne Rahmen (Codeblatt-Look)
+   'carved' : in Stein gemeisselt — dunkle Form, Lichtkante unten rechts, Schatten oben links
+   'burnt'  : in Holz/Metall gebrannt — verkohlt, leicht roetlicher Rand
+   'glow'   : leuchtende Form (Anzeige, Konsole), color = Leuchtfarbe      */
+function drawSymbol(kind, cx, cy, r, style, color) {
+  if (style === 'carved') {
+    symbolPath(kind, cx + 0.7, cy + 0.7, r); ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.fill();
+    symbolPath(kind, cx - 0.5, cy - 0.5, r); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+    symbolPath(kind, cx, cy, r * 0.9); ctx.fillStyle = color || '#24242b'; ctx.fill();
+  } else if (style === 'burnt') {
+    symbolPath(kind, cx, cy, r); ctx.fillStyle = 'rgba(140,60,20,0.55)'; ctx.fill();
+    symbolPath(kind, cx, cy, r * 0.84); ctx.fillStyle = color || '#140b08'; ctx.fill();
+  } else if (style === 'glow') {
+    const c = color || '#6fe0ff';
+    ctx.globalAlpha = 0.22; symbolPath(kind, cx, cy, r * 1.6); ctx.fillStyle = c; ctx.fill();
+    ctx.globalAlpha = 0.45; symbolPath(kind, cx, cy, r * 1.25); ctx.fill();
+    ctx.globalAlpha = 1;    symbolPath(kind, cx, cy, r); ctx.fill();
+    symbolPath(kind, cx, cy, r * 0.45); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fill();
+  } else {
+    symbolPath(kind, cx, cy, r); ctx.fillStyle = color || '#000'; ctx.fill();
+  }
+}
+/* Data-URI-Icon fuer die Oberflaeche (Codeblatt, Dialoge, Knoepfe) —
+   gerendert aus demselben Pfad; px = Kantenlaenge des Icons.             */
+const symbolIconCache = {};
+function symbolIcon(kind, px, color) {
+  const key = kind + '|' + px + '|' + (color || '');
+  if (symbolIconCache[key]) return symbolIconCache[key];
+  const c = document.createElement('canvas'); c.width = c.height = px;
+  const saved = ctx; ctx = c.getContext('2d');
+  drawSymbol(kind, px / 2, px / 2 + (kind === 'triangle' ? px * 0.06 : 0), px * 0.46, 'flat', color || '#000');
+  ctx = saved;
+  return (symbolIconCache[key] = c.toDataURL('image/png'));
+}
+/* <img> fuer einen Schritt (pattern/status/confirm/star); cls = Groessenklasse */
+function codeSym(step, cls, color) {
+  const kind = CODE_SYMBOLS[step]; if (!kind) return '';
+  return `<img class="codesym ${cls || ''}" alt="" aria-hidden="true" src="${symbolIcon(kind, 64, color)}">`;
+}
+
 /* ---------- Das Tor: prozedurale Pixel-Art, weil es sich oeffnet ----------
    x = Mitte, g = Bodenlinie. openK 0..1 = Fluegel aufgedreht, red 0..1 = rot
    (Ablehnung). Alles in ganzen Spiel-Pixeln gezeichnet, damit es zum Raster
@@ -290,9 +350,12 @@ function gateDraw(x, g, openK, red) {
   ctx.fillStyle = stoneL; ctx.fillRect(L - 2, top + 1, R - L + 4, 1);
   ctx.fillStyle = mortar; for (let px = L + 2; px < R; px += 8) ctx.fillRect(px, top + 1, 1, 8);
   for (let i = 0; i < 5; i++) { const zx = L - 2 + i * 17; ctx.fillStyle = '#1b1024'; ctx.fillRect(zx, top - 5, 9, 6); ctx.fillStyle = stone; ctx.fillRect(zx + 1, top - 4, 7, 5); ctx.fillStyle = stoneL; ctx.fillRect(zx + 1, top - 4, 7, 1); }
-  // Schlussstein mit Rune
-  ctx.fillStyle = '#ffd23f'; ctx.fillRect(x - 4, top + 2, 8, 6);
-  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 1, top + 3, 2, 4); ctx.fillRect(x - 3, top + 4, 6, 1);
+  // Schlussstein ueber dem Eingang mit eingemeisseltem Dreieck (Initialisierungscode)
+  ctx.fillStyle = '#1b1024'; ctx.fillRect(x - 10, top - 5, 20, 24);
+  ctx.fillStyle = stoneL; ctx.fillRect(x - 9, top - 4, 18, 22);
+  ctx.fillStyle = stone; ctx.fillRect(x - 8, top - 3, 16, 20);
+  ctx.fillStyle = stoneD; ctx.fillRect(x - 8, top + 16, 16, 1); ctx.fillRect(x + 7, top - 3, 1, 20);
+  drawSymbol('triangle', x, top + 7.5, 8, 'carved', red > 0 ? '#5a1a1a' : '#1e1e24');
   // Durchgang: dunkel, mit Licht je nach Oeffnung
   const iw = (R - 14) - (L + 14);
   ctx.fillStyle = '#0c0a10'; ctx.fillRect(L + 14, top + 10, iw, g - top - 10);

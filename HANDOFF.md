@@ -347,6 +347,34 @@ Felder bekommen.
   `gate_reject` → Runen und Tor rot, flackern, erlöschen. Das Initialisierungs-
   tor (`gate`) bleibt wie es war.
 
+### Vierzehnter Durchgang (Symbole des Stimmrechtsausweises)
+
+* Feste Zuordnung wie auf dem echten Ausweis (`CODE_SYMBOLS` in pixart.js):
+  Dreieck = Initialisierungscode (Muster), Raute = Prüfcodes (Statuswert),
+  Fünfeck = Bestätigungscode, Stern = Finalisierungscode. Schwarz gefüllte
+  einfache Formen, ohne Rahmen, ohne Farbe.
+* Technik: ein Canvas-Pfad pro Form (`symbolPath`), gezeichnet über
+  `drawSymbol(kind, cx, cy, r, style)` mit den Stilen `flat` (Codeblatt),
+  `carved` (in Stein gemeisselt), `burnt` (eingebrannt), `glow` (leuchtend).
+  Die Icons für die Oberfläche (`symbolIcon` → Data-URI, `codeSym(step, cls)`)
+  kommen aus demselben Pfad — darum kein Pillow-Sprite: dieselbe Form in jeder
+  Grösse ohne Treppen, und es gibt keine Datei, die aus dem Tritt kommen kann.
+* Codeblatt: jede Zeile = Symbol links, Bezeichnung + Wert rechts
+  (`cardEntry`); Schiffsnummer und Hut haben eine leere Symbolspalte.
+  Rückseite: alle vier Prüfcode-Zeilen tragen die Raute.
+* Welt: Dreieck im Schlussstein über dem ersten Tor (`gateDraw`), Raute auf dem
+  Messgerät in Spinnenhöhle/Krokodilsumpf (`drawStatusMeter`, zeigt
+  `state.meterValue` — denselben Wert wie der Dialog, vor dem Kampf Striche),
+  Fünfeck auf der Runenkonsole und als grosse Steintafel über dem Turmbogen
+  (`towerConsole`, `towerPlaque`), Stern: alle Sterne im Sternenraum sind jetzt
+  fünfzackig (`drawStarShape` nutzt denselben Pfad) plus Bodenmedaillon vor der
+  Sternwahl (`drawStarMedallion`).
+* Oberfläche: `showDialogue` / `showChoice` / `showInput` nehmen `opts.icon`
+  (pattern/status/confirm/star) und zeigen das Symbol links vom Text; die
+  Muster-Auswahlknöpfe tragen das Dreieck vorne; Lernkarten und die
+  Zuordnungstabelle am Ende tragen das Symbol des Schritts.
+* Logik, Reihenfolge und Codewerte unverändert.
+
 ## Was ihr / Claude Code noch machen müsst
 1. **Echte 32px Sprites einbinden.** Sheets in `assets/` legen, im
    ASSET_MANIFEST den `src` und `frames` setzen. Liste in

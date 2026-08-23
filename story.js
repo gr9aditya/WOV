@@ -163,16 +163,16 @@ defScene('gate', {
   hotspots: [
     { id:'gate', x:128, label: L('hs.gate'),
       onInteract: () => showChoice('dlg.gate.prompt', PATTERNS.map(p => ({
-        label: () => patternHtml(p), text: () => patternText(p), cls:'symrow', onClick: () => pickPattern(p) })), { cls:'symbols' }) }
+        label: () => codeSym('pattern', 'inbtn', '#f4e9c9') + patternHtml(p), text: () => patternText(p), cls:'symrow', onClick: () => pickPattern(p) })), { cls:'symbols', icon:'pattern' }) }
   ]
 });
 function pickPattern(p) {
   if (p.join('-') === CODEBLATT.pattern.join('-')) {
     playSequence([{ key:'gate_open', x:128, bottomY:groundY, dur:0.9, sfx:'gate', shake:1.5, shakeDur:0.5 }],
-      () => { state.gateOpen = true; showDialogue('dlg.gate.ok', { onFinal: () => learnCard('pattern', true, () => doorWalk(() => goToScene('fork'))) }); });
+      () => { state.gateOpen = true; showDialogue('dlg.gate.ok', { icon:'pattern', onFinal: () => learnCard('pattern', true, () => doorWalk(() => goToScene('fork'))) }); });
   } else {
     playSequence([{ key:'gate_reject', x:128, bottomY:groundY, dur:0.6, sfx:'error', shake:2.5, shakeDur:0.35 }],
-      () => showDialogue('dlg.gate.fail', { finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('pattern', false, respawnAtCheckpoint) }));
+      () => showDialogue('dlg.gate.fail', { icon:'pattern', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('pattern', false, respawnAtCheckpoint) }));
   }
 }
 
@@ -205,7 +205,8 @@ function combatScene(kind, bg) {
             // (den "noch wach"-Wert) — der Spieler muss ihn am Blatt erkennen und melden.
             const real = CODEBLATT[kind].win;
             const shown = Math.random() < 0.5 ? real : CODEBLATT[kind].awake;
-            showDialogue([tr('dlg.' + kind + '.taunt'), tr('dlg.combat.won'), tr('dlg.combat.meter', { code: shown })], { onFinal: () => showStatusCheck(kind, shown, 1) });
+            state.meterValue = shown;                  // das Messgeraet in der Szene zeigt denselben Wert
+            showDialogue([tr('dlg.' + kind + '.taunt'), tr('dlg.combat.won'), tr('dlg.combat.meter', { code: shown })], { icon:'status', onFinal: () => showStatusCheck(kind, shown, 1) });
           });
         } }
     ],
@@ -222,21 +223,23 @@ combatScene('croc', drawCrocScene);
    - Wert richtig  + Falsch -> Fehlschlag (richtigen Wert angezweifelt)       */
 function showStatusCheck(kind, shown, attempt) {
   const real = CODEBLATT[kind].win;
+  state.meterValue = shown;
   const ask = () => showChoice(tr('dlg.status.shown', { code: shown }), [
     { label:'ui.correct', onClick: () => {
-        if (shown === real) { state.enemyState = 'verified'; showDialogue('dlg.status.ok', { onFinal: () => learnCard('status', true, () => goToScene('confirmgate')) }); }
-        else showDialogue('dlg.status.failAccept', { finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('status', false, respawnAtCheckpoint) });
+        if (shown === real) { state.enemyState = 'verified'; showDialogue('dlg.status.ok', { icon:'status', onFinal: () => learnCard('status', true, () => goToScene('confirmgate')) }); }
+        else showDialogue('dlg.status.failAccept', { icon:'status', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('status', false, respawnAtCheckpoint) });
       } },
     { label:'ui.wrong', onClick: () => {
         // der Gegner bleibt liegen — gescheitert ist hoechstens die Pruefung, nicht der Kampf
-        if (shown !== real) showDialogue('dlg.status.reported', { onFinal: () => {
+        if (shown !== real) showDialogue('dlg.status.reported', { icon:'status', onFinal: () => {
             Sfx.play('blip');
-            showDialogue([tr('dlg.combat.meter', { code: real })], { onFinal: () => showStatusCheck(kind, real, attempt + 1) });
+            state.meterValue = real;                   // neu gemessen: jetzt der richtige Wert
+            showDialogue([tr('dlg.combat.meter', { code: real })], { icon:'status', onFinal: () => showStatusCheck(kind, real, attempt + 1) });
           } });
-        else showDialogue('dlg.status.falseAlarm', { finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('status', false, respawnAtCheckpoint) });
+        else showDialogue('dlg.status.falseAlarm', { icon:'status', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('status', false, respawnAtCheckpoint) });
       } }
-  ]);
-  if (attempt === 1) showDialogue('dlg.status.check', { onFinal: ask }); else ask();
+  ], { icon:'status' });
+  if (attempt === 1) showDialogue('dlg.status.check', { icon:'status', onFinal: ask }); else ask();
 }
 
 defScene('confirmgate', {
@@ -249,15 +252,15 @@ function askConfirmCode() {
     const norm = (val||'').trim().toUpperCase();
     if (norm === CODEBLATT.confirmCode) {
       playSequence([{ key:'gate_open', x:128, bottomY:groundY, dur:0.9, sfx:'gate', shake:1.5, shakeDur:0.5 }],
-        () => { state.gateOpen = true; showDialogue('dlg.confirm.ok', { onFinal: () => learnCard('confirm', true, () => doorWalk(() => goToScene('stars'))) }); });
+        () => { state.gateOpen = true; showDialogue('dlg.confirm.ok', { icon:'confirm', onFinal: () => learnCard('confirm', true, () => doorWalk(() => goToScene('stars'))) }); });
     } else {
       failFlash();
       showChoice('dlg.confirm.fail', [
         { label:'ui.again', onClick: askConfirmCode },
         { label:'ui.backGate', onClick: () => learnCard('confirm', false, respawnAtCheckpoint) }
-      ]);
+      ], { icon:'confirm' });
     }
-  });
+  }, { icon:'confirm' });
 }
 
 defScene('stars', {
@@ -265,7 +268,7 @@ defScene('stars', {
   hotspots: [
     { id:'stars', x:40, label: L('hs.stars'),
       onInteract: () => showChoice('dlg.stars.prompt', STARS.map((s, i) => ({
-        label: () => starHtml(s.id, true), text: () => tr('star.' + s.id + '.short'), cls:'symrow', onClick: () => pickStar(i) })), { cls:'symbols' }) }
+        label: () => starHtml(s.id, true), text: () => tr('star.' + s.id + '.short'), cls:'symrow', onClick: () => pickStar(i) })), { cls:'symbols', icon:'star' }) }
   ],
   onEnter: () => showDialogue('dlg.stars.intro')
 });
@@ -275,7 +278,7 @@ function pickStar(i) {
     starFinale(i);
   } else {
     playSequence([{ key:'star_shatter', x:st.x, bottomY:STAR_Y, dur:0.6, sfx:'shatter', shake:2.5, shakeDur:0.3, onStart: () => { state.starTaken = i; } }],
-      () => showDialogue('dlg.stars.fail', { finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('star', false, respawnAtCheckpoint) }));
+      () => showDialogue('dlg.stars.fail', { icon:'star', finalLabel:'ui.retry', failure:true, onFinal: () => learnCard('star', false, respawnAtCheckpoint) }));
   }
 }
 /* Finale: Zeit steht fast still, der Stern flammt weiss auf, stuerzt mit
@@ -300,7 +303,7 @@ function starFinale(i) {
   ], () => {
     timeScale = 1;
     state.brunoHidden = true;                      // er ist mit dem Stern davongeflogen
-    showDialogue('dlg.stars.ok', { finalLabel:'ui.finish', onFinal: () => learnCard('star', true, () => goToScene('end')) });
+    showDialogue('dlg.stars.ok', { icon:'star', finalLabel:'ui.finish', onFinal: () => learnCard('star', true, () => goToScene('end')) });
   });
 }
 
@@ -397,7 +400,7 @@ function drawCleanupBruno() {
 function mappingTableHtml() {
   const rows = ['codeblatt', 'ship', 'pattern', 'status', 'confirm', 'star', 'clean'].map(k => {
     const r = tr('map.' + k, { n: CODEBLATT.ship });
-    return `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
+    return `<tr><td>${codeSym(k, 'tbl', '#2a1810')}${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
   }).join('');
   return `<table class="mapping"><thead><tr><th>${tr('map.h.game')}</th><th>${tr('map.h.real')}</th><th>${tr('map.h.threat')}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -435,7 +438,7 @@ function learnCard(step, ok, next) {
     const panel = document.createElement('div');
     panel.className = 'panel learn' + (ok ? ' ok' : ' fail');
     panel.setAttribute('role', 'dialog');
-    panel.innerHTML = `<div class="line"><span class="learntag">${tr('ui.learnTitle')}: ${name[1]}</span><br>${tr('learn.' + step + '.step')}<br>${tr('learn.' + step + '.threat')}<br><i>${ok ? tr('learn.ok') : tr('learn.fail')}</i></div>
+    panel.innerHTML = `<div class="line"><span class="learntag">${codeSym(step, 'tag', '#f4e9c9')}${tr('ui.learnTitle')}: ${name[1]}</span><br>${tr('learn.' + step + '.step')}<br>${tr('learn.' + step + '.threat')}<br><i>${ok ? tr('learn.ok') : tr('learn.fail')}</i></div>
       <div class="btnrow"><button class="btn gold" id="learnOkBtn">${tr('ui.learnOk')}</button></div>`;
     document.getElementById('uiLayer').appendChild(panel);
     document.getElementById('learnOkBtn').onclick = () => { clearUI(); ui.mode = null; next(); };
@@ -450,6 +453,12 @@ function learnCard(step, ok, next) {
 let cardState = null;                       // { side, isFirstTime } — fuer Sprachwechsel bei offener Karte
 let focusBeforeModal = null;
 function firstCodeblattReveal() { ui.mode = 'modal'; focusBeforeModal = document.activeElement; renderCodeblattCard('front', true); }
+/* Eine Zeile des Codeblatts wie auf dem echten Stimmrechtsausweis:
+   Symbol links (Dreieck/Raute/Fuenfeck/Stern), Bezeichnung und Wert rechts.
+   step = null: Zeile ohne Symbol (Schiffsnummer, Hut) — Spalte bleibt leer. */
+function cardEntry(step, name, valueHtml, isRow) {
+  return `<div class="entry"><span class="csym">${step ? codeSym(step, 'card') : ''}</span><div class="ebody"><b>${name}</b><span class="val${isRow ? ' symrow' : ''}">${valueHtml}</span></div></div>`;
+}
 function renderCodeblattCard(side, isFirstTime) {
   cardState = { side, isFirstTime };
   const overlay = document.getElementById('modalOverlay');
@@ -461,11 +470,11 @@ function renderCodeblattCard(side, isFirstTime) {
   if (side === 'front') {
     card.innerHTML = `
       <h3 id="cardTitle">${tr('card.front')}</h3>
-      <div class="entry"><b>${tr('card.ship')}</b><span class="val">${CODEBLATT.ship}</span></div>
-      <div class="entry"><b>${tr('card.pattern')}</b><span class="val symrow">${patternHtml(CODEBLATT.pattern)}</span></div>
-      <div class="entry"><b>${tr('card.confirm')}</b><span class="val">${CODEBLATT.confirmCode}</span></div>
-      <div class="entry"><b>${tr('card.final')}</b><span class="val symrow">${starHtml(CODEBLATT.finalStar, false)}</span></div>
-      <div class="entry"><b>${tr('card.hat')}</b><span class="val symrow"><img class="sym hat" alt="" src="assets/props/hat.png"> ${tr('card.hatVal')}</span></div>
+      ${cardEntry(null,      tr('card.ship'),    CODEBLATT.ship)}
+      ${cardEntry('pattern', tr('card.pattern'), patternHtml(CODEBLATT.pattern), true)}
+      ${cardEntry('confirm', tr('card.confirm'), CODEBLATT.confirmCode)}
+      ${cardEntry('star',    tr('card.final'),   starHtml(CODEBLATT.finalStar, false), true)}
+      ${cardEntry(null,      tr('card.hat'),     `<img class="sym hat" alt="" src="assets/props/hat.png"> ${tr('card.hatVal')}`, true)}
       <div class="cardhint">${tr('card.hint')}</div>
       <div class="btnrow">
         <button class="btn" id="flipBtn">${tr('ui.flip')}</button>
@@ -474,10 +483,10 @@ function renderCodeblattCard(side, isFirstTime) {
   } else {
     card.innerHTML = `
       <h3 id="cardTitle">${tr('card.back')}</h3>
-      <div class="entry"><b>${tr('card.spiderWin')}</b><span class="val">${CODEBLATT.spider.win}</span></div>
-      <div class="entry"><b>${tr('card.spiderAwake')}</b><span class="val">${CODEBLATT.spider.awake}</span></div>
-      <div class="entry"><b>${tr('card.crocWin')}</b><span class="val">${CODEBLATT.croc.win}</span></div>
-      <div class="entry"><b>${tr('card.crocAwake')}</b><span class="val">${CODEBLATT.croc.awake}</span></div>
+      ${cardEntry('status', tr('card.spiderWin'),   CODEBLATT.spider.win)}
+      ${cardEntry('status', tr('card.spiderAwake'), CODEBLATT.spider.awake)}
+      ${cardEntry('status', tr('card.crocWin'),     CODEBLATT.croc.win)}
+      ${cardEntry('status', tr('card.crocAwake'),   CODEBLATT.croc.awake)}
       <div class="btnrow">
         <button class="btn" id="flipBtn">${tr('ui.flip')}</button>
         <button class="btn" id="closeCardBtn">${tr('ui.close')}</button>
@@ -628,7 +637,7 @@ function showDialogue(lines, opts) {
     panel.className = 'panel';
     panel.setAttribute('role', 'dialog');
     const isLast = idx === all.length - 1;
-    panel.innerHTML = `<div class="line"></div><div class="btnrow"><button class="btn" id="dlgBtn">${isLast ? tr(finalKey) : tr('ui.next')}</button></div>`;
+    panel.innerHTML = `<div class="linewrap">${opts.icon ? codeSym(opts.icon, 'dlg', '#2a1810') : ''}<div class="line"></div></div><div class="btnrow"><button class="btn" id="dlgBtn">${isLast ? tr(finalKey) : tr('ui.next')}</button></div>`;
     document.getElementById('uiLayer').appendChild(panel);
     // Typewriter: Text laeuft ein; erster Klick zeigt alles, zweiter blaettert.
     const lineEl = panel.querySelector('.line');
@@ -663,7 +672,7 @@ function showChoice(prompt, options, opts) {
     panel.className = 'panel ' + (opts.cls || '');
     panel.setAttribute('role', 'dialog');
     const btns = options.map((o, i) => `<button class="btn ${o.cls || ''}" data-i="${i}"><span class="key">${i + 1}</span>${resolveText(o.label)}</button>`).join('');
-    panel.innerHTML = `<div class="line">${resolveText(prompt)}</div><div class="btnrow">${btns}</div>`;
+    panel.innerHTML = `<div class="linewrap">${opts.icon ? codeSym(opts.icon, 'dlg', '#2a1810') : ''}<div class="line">${resolveText(prompt)}</div></div><div class="btnrow">${btns}</div>`;
     document.getElementById('uiLayer').appendChild(panel);
     panel.querySelectorAll('button').forEach(b => { b.onclick = () => { clearUI(); ui.mode = null; options[+b.dataset.i].onClick(); }; });
     announce(resolveText(prompt) + ' ' + tr('a11y.choice', { n: options.length }) + ' ' + options.map((o, i) => (i + 1) + ': ' + (o.text ? o.text() : stripHtml(resolveText(o.label)))).join(', '));
@@ -671,7 +680,8 @@ function showChoice(prompt, options, opts) {
   };
   render();
 }
-function showInput(promptKey, placeholderKey, onSubmit) {
+function showInput(promptKey, placeholderKey, onSubmit, opts) {
+  opts = opts || {};
   let typed = '';
   const render = () => {
     ui.mode = 'panel'; clearUI();
@@ -679,7 +689,7 @@ function showInput(promptKey, placeholderKey, onSubmit) {
     const panel = document.createElement('div');
     panel.className = 'panel';
     panel.setAttribute('role', 'dialog');
-    panel.innerHTML = `<label class="line" for="txtInput">${tr(promptKey)}</label><input type="text" id="txtInput" placeholder="${tr(placeholderKey)}" autocomplete="off" spellcheck="false" aria-label="${tr(promptKey)}"><div class="btnrow"><button class="btn gold" id="submitBtn">${tr('ui.confirm')}</button></div>`;
+    panel.innerHTML = `<div class="linewrap">${opts.icon ? codeSym(opts.icon, 'dlg', '#2a1810') : ''}<label class="line" for="txtInput">${tr(promptKey)}</label></div><input type="text" id="txtInput" placeholder="${tr(placeholderKey)}" autocomplete="off" spellcheck="false" aria-label="${tr(promptKey)}"><div class="btnrow"><button class="btn gold" id="submitBtn">${tr('ui.confirm')}</button></div>`;
     document.getElementById('uiLayer').appendChild(panel);
     const inp = document.getElementById('txtInput');
     inp.value = typed;
